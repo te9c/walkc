@@ -104,7 +104,7 @@ int run_container(container *cont) {
     pid = clone(
         container_start,
         cont->stack + STACK_SIZE,
-        CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWUTS | SIGCHLD,
+        CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWUTS | CLONE_NEWIPC | SIGCHLD,
         cont
     );
 
