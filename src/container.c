@@ -85,7 +85,9 @@ static int container_start(void *arg) {
         return 1;
     }
 
-    execvp(cont->argv[0], cont->argv);
+    char* command = cont->argv[0];
+    cont->argv[0] = basename(cont->argv[0]);
+    execvp(command, cont->argv);
     perror("execvp");
     return 1;
 }
