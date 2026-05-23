@@ -1,0 +1,4 @@
+build/
+rootfs/
+.vscode/
+walkc
