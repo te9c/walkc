@@ -13,5 +13,6 @@
 #define FALLBACK_RUNTIME_DIR "/run/walkc"
 #define RUNTIME_DIR_NAME "walkc"
 #define ID_MAX 128
+#define CONTAINER_STACK_SIZE (1024 * 1024)
 
 #endif
