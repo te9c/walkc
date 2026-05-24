@@ -9,5 +9,7 @@
 #define DEFAULT_ROOTFS_PATH "rootfs"
 #define DEFUALT_RUN_PROGRAM "sh"
 #define DEFAULT_HOSTNAME "walkc"
+#define FALLBACK_RUNTIME_DIR "/run/walkc"
+#define RUNTIME_DIR_NAME "walkc"
 
 #endif
