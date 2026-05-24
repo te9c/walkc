@@ -86,6 +86,9 @@ static int cmd_spec(int argc, char **argv) {
     }
     return 0;
 }
+static int cmd_state(int argc unused_attr, char **argv unused_attr) {
+    return 1;
+}
 static int cmd_help(int argc, char** argv);
 
 static const command commands[] = {
@@ -95,6 +98,7 @@ static const command commands[] = {
     { "start",     cmd_start,     "start previously created container"},
     { "kill",      cmd_kill,      "send signal to container's init process"},
     { "spec",      cmd_spec,      "generate spec file"},
+    { "state",     cmd_state,     "inspect state of the container"},
     { "help",      cmd_help,      "show this message"}
 };
 

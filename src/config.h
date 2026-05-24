@@ -11,5 +11,6 @@
 #define DEFAULT_HOSTNAME "walkc"
 #define FALLBACK_RUNTIME_DIR "/run/walkc"
 #define RUNTIME_DIR_NAME "walkc"
+#define ID_MAX 128
 
 #endif

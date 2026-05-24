@@ -40,7 +40,6 @@ const char *runtime_dir() {
         return NULL;
     }
     strcpy(_runtime_dir, s);
-    char runtime_dir[0];
     if (_runtime_dir[len - 1] != '/') {
         _runtime_dir[len] = '/';
         _runtime_dir[len + 1] = '\0';
