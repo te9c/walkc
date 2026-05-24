@@ -45,6 +45,4 @@ config_spec *get_default_spec();
 char *spec_to_json(const config_spec *spec);
 config_spec *spec_from_json(const char *json);
 
-int generate_spec(const char *path);
-
 #endif
