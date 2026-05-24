@@ -219,8 +219,10 @@ config_spec *spec_from_json(const char *json) {
     if (!json_object_object_get_ex(root, "root", &rootfs)) goto fail;
     if (!json_object_is_type(rootfs, json_type_object)) goto fail;
 
+    char rootfs_relative[PATH_MAX];
     if (get_string_field(rootfs, "path",
-            spec->rootfs_path, sizeof(spec->rootfs_path), 1) < 0) goto fail;
+            rootfs_relative, sizeof(rootfs_relative), 1) < 0) goto fail;
+    if (!realpath(rootfs_relative, spec->rootfs_path)) goto fail;
     if (get_int_field(rootfs, "readonly",
             &spec->rootfs_readonly, 0) < 0) goto fail;
 

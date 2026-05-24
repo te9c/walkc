@@ -5,11 +5,14 @@
 #include <string.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <stdlib.h>
+#include <sys/stat.h>
 
 #include "container.h"
 // #include "metadata.h"
 #include "spec.h"
 #include "config.h"
+#include "utils.h"
 
 #define unused_attr __attribute__((unused))
 
@@ -21,10 +24,98 @@ typedef struct command {
     const char* summary;
 } command;
 
-static int cmd_create(int argc unused_attr, char** argv unused_attr) {
+static int cmd_create(int argc, char** argv) {
     // options:
     // --bundle: path to bundle (default is current directory)
-    return 1;
+    static struct option long_options[] = {
+        {"bundle", required_argument, 0, 'b'},
+        {0,0,0,0}
+    };
+    char bundle_path[PATH_MAX] = DEFAULT_BUNDLE_PATH;
+    int c;
+    while ((c = getopt_long(argc, argv, "b:", long_options, NULL)) != -1) {
+        switch (c) {
+            case 'b':
+                int ln = strlen(optarg);
+                if (ln >= PATH_MAX) {
+                    fprintf(stderr, "bundle argument is too big.\n");
+                    return 1;
+                }
+                strcpy(bundle_path, optarg);
+                break;
+            case '?':
+                return 1;
+        }
+    }
+    if (optind == argc) {
+        fprintf(stderr, "Expected id.\n");
+        return 1;
+    }
+    char* id = argv[optind];
+    if (strlen(id) >= ID_MAX) {
+        fprintf(stderr, "Id is too big.\n");
+        return 1;
+    }
+    if (optind + 1 != argc) {
+        fprintf(stderr, "Invalid usage.\n");
+    }
+    if (chdir(bundle_path) < 0) {
+        perror("chdir");
+        return 1;
+    }
+    char *spec_file_contents = read_all_file(SPEC_CONFIG_FILENAME);
+    if (!spec_file_contents) {
+        perror("config.json");
+        return 1;
+    }
+
+    container cont;
+    cont.status = CONTAINER_CREATED;
+    cont.pid = 0;
+    strcpy(cont.id, id);
+    if (!realpath(bundle_path, cont.bundle)) {
+        perror("realpath");
+        return 1;
+    }
+    cont.spec = spec_from_json(spec_file_contents);
+    if (!cont.spec) {
+        perror("spec_from_json");
+        return 1;
+    }
+
+
+    const char *rd = runtime_dir();
+    if (!rd) {
+        perror("runtime dir");
+        return 1;
+    }
+
+    if (chdir(rd) < 0) {
+        perror("chdir");
+        return 1;
+    }
+    if (chdir(id) == 0) {
+        fprintf(stderr, "id already exists\n");
+        return 1;
+    }
+    if (mkdir(id, 0700) < 0) {
+        perror("mkdir");
+        return 1;
+    }
+    if (chdir(id) < 0) {
+        perror("chdir");
+        return 1;
+    }
+
+    char *container_state_json = container_to_state_json(&cont);
+    if (!container_state_json) {
+        perror("container_to_state_json");
+        return 1;
+    }
+    if (create_file_with_content(STATE_FILENAME, container_state_json) < 0) {
+        return 1;
+    }
+    return 0;
 }
 static int cmd_delete(int argc unused_attr, char** argv unused_attr) { return 1; }
 static int cmd_run(int argc unused_attr, char** argv unused_attr) { return 1; }
@@ -35,7 +126,7 @@ static int cmd_spec(int argc, char **argv) {
         {"bundle", required_argument, 0, 'b'},
         {0,0,0,0}
     };
-    char spec_path[PATH_MAX] = DEFAULT_SPEC_PATH;
+    char bundle_path[PATH_MAX] = DEFAULT_BUNDLE_PATH;
     int c;
     while ((c = getopt_long(argc, argv, "b:", long_options, NULL)) != -1) {
         switch (c) {
@@ -45,7 +136,7 @@ static int cmd_spec(int argc, char **argv) {
                     fprintf(stderr, "bundle argument is too big.\n");
                     return 1;
                 }
-                strcpy(spec_path, optarg);
+                strcpy(bundle_path, optarg);
                 break;
             case '?':
                 return 1;
@@ -55,7 +146,7 @@ static int cmd_spec(int argc, char **argv) {
         fprintf(stderr, "Invalid usage.\n");
         return 1;
     }
-    if (chdir(spec_path) < 0) {
+    if (chdir(bundle_path) < 0) {
         perror("chdir");
         return 1;
     }

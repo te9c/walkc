@@ -30,5 +30,5 @@ int run_container(container *cont);
 
 const char *container_status_to_string(container_status st);
 char *container_to_state_json(container* cont);
-container container_form_state_json(const char* state);
+container container_from_state_json(const char* state);
 #endif

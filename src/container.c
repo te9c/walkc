@@ -76,7 +76,7 @@ char *container_to_state_json(container *cont) {
         json_object_object_add(root, "config", NULL);
     }
 
-    const char *tmp = json_object_to_json_string_ext(root, JSON_C_TO_STRING_PRETTY);
+    const char *tmp = json_object_to_json_string_ext(root, JSON_C_TO_STRING_PRETTY | JSON_C_TO_STRING_NOSLASHESCAPE);
     if (tmp == NULL) {
         json_object_put(root);
         return NULL;

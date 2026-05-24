@@ -10,4 +10,7 @@ int mkdir_if_needed(const char *path, mode_t mode);
 
 const char *runtime_dir();
 
+char *read_all_file(const char *path);
+int create_file_with_content(const char *path, const char *content);
+
 #endif

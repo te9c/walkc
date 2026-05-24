@@ -2,8 +2,9 @@
 #define CONFIG_H
 
 #define OCI_VERSION "1.0.0"
-#define DEFAULT_SPEC_PATH "."
+#define DEFAULT_BUNDLE_PATH "."
 #define SPEC_CONFIG_FILENAME "config.json"
+#define STATE_FILENAME "state.json"
 #define OCI_VERSION_MAX 32
 #define TYPE_MAX 64
 #define DEFAULT_ROOTFS_PATH "rootfs"
