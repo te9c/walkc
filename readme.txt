@@ -1,7 +1,7 @@
 ### walkc - simple educational implementation of container runtime.
 
-What is a container runtime?
-Key features:
-1. container creation.
-2. container run/stop.
-3. container deletion.
+TODO:
+1. [x] Simple `run <rootfs> <cmd>` container isolation.
+2. [ ] Cgroups.
+3. [ ] CLI.
+4. [ ] Minimal OCI config support.
