@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <string.h>
 #include <unistd.h>
+#include <getopt.h>
 
 #include "container.h"
 // #include "metadata.h"
@@ -20,13 +21,45 @@ typedef struct command {
     const char* summary;
 } command;
 
-static int cmd_create(int argc unused_attr, char** argv unused_attr) { return 1; }
+static int cmd_create(int argc unused_attr, char** argv unused_attr) {
+    // options:
+    // --bundle: path to bundle (default is current directory)
+    return 1;
+}
 static int cmd_delete(int argc unused_attr, char** argv unused_attr) { return 1; }
 static int cmd_run(int argc unused_attr, char** argv unused_attr) { return 1; }
 static int cmd_start(int argc unused_attr, char** argv unused_attr) { return 1; }
 static int cmd_kill(int argc unused_attr, char** argv unused_attr) { return 1; }
-static int cmd_spec(int argc unused_attr, char** argv unused_attr) {
-    if (access(DEFAULT_SPEC_PATH, F_OK) == 0) {
+static int cmd_spec(int argc, char **argv) {
+    static struct option long_options[] = {
+        {"bundle", required_argument, 0, 'b'},
+        {0,0,0,0}
+    };
+    char spec_path[PATH_MAX] = DEFAULT_SPEC_PATH;
+    int c;
+    while ((c = getopt_long(argc, argv, "b:", long_options, NULL)) != -1) {
+        switch (c) {
+            case 'b':
+                int ln = strlen(optarg);
+                if (ln >= PATH_MAX) {
+                    fprintf(stderr, "bundle argument is too big.\n");
+                    return 1;
+                }
+                strcpy(spec_path, optarg);
+                break;
+            case '?':
+                return 1;
+        }
+    }
+    if (optind < argc) {
+        fprintf(stderr, "Invalid usage.\n");
+        return 1;
+    }
+    if (chdir(spec_path) < 0) {
+        perror("chdir");
+        return 1;
+    }
+    if (access(SPEC_CONFIG_FILENAME, F_OK) == 0) {
         fprintf(stderr, "config.json already exists\n");
         return 1;
     }
@@ -36,7 +69,7 @@ static int cmd_spec(int argc unused_attr, char** argv unused_attr) {
         return 1;
     }
     char *json_spec = spec_to_json(spec);
-    int fd = open(DEFAULT_SPEC_PATH, O_WRONLY | O_CREAT, 0644);
+    int fd = open(SPEC_CONFIG_FILENAME, O_WRONLY | O_CREAT, 0644);
     if (fd < 0) {
         perror("open");
         return 1;
@@ -109,10 +142,34 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    int global_argc = 1;
+    for (int i = 1; i < argc; ++i) {
+        if (argv[i][0] == '-')
+            ++global_argc;
+        else
+            break;
+    }
+
+    int c;
+    static struct option long_options[] = {
+        {0,0,0,0}
+    };
+    while ((c = getopt_long(global_argc, argv, "", long_options, NULL)) != -1) {
+        switch (c) {
+            case '?':
+                return 1;
+        }
+    }
+    if (global_argc == argc) {
+        fprintf(stderr, "Invalid usage.\n");
+        return 1;
+    }
+
     const command* cmd = find_command(argv[1]);
     if (!cmd) {
         fprintf(stderr, "Invalid command.\n");
         return 1;
     }
-    return cmd->run(argc - 1, argv + 1);
+    optind = 1;
+    return cmd->run(argc - global_argc, argv + global_argc);
 }
