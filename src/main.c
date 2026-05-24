@@ -1,8 +1,14 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <string.h>
+#include <fcntl.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "container.h"
-#include "metadata.h"
+// #include "metadata.h"
+#include "spec.h"
+#include "config.h"
 
 #define unused_attr __attribute__((unused))
 
@@ -19,7 +25,34 @@ static int cmd_delete(int argc unused_attr, char** argv unused_attr) { return 1;
 static int cmd_run(int argc unused_attr, char** argv unused_attr) { return 1; }
 static int cmd_start(int argc unused_attr, char** argv unused_attr) { return 1; }
 static int cmd_kill(int argc unused_attr, char** argv unused_attr) { return 1; }
-static int cmd_spec(int argc unused_attr, char** argv unused_attr) { return 1; }
+static int cmd_spec(int argc unused_attr, char** argv unused_attr) {
+    if (access(DEFAULT_SPEC_PATH, F_OK) == 0) {
+        fprintf(stderr, "config.json already exists\n");
+        return 1;
+    }
+    config_spec* spec = get_default_spec();
+    if (!spec) {
+        perror("default_spec");
+        return 1;
+    }
+    char *json_spec = spec_to_json(spec);
+    int fd = open(DEFAULT_SPEC_PATH, O_WRONLY | O_CREAT, 0644);
+    if (fd < 0) {
+        perror("open");
+        return 1;
+    }
+    int written = 0;
+    int to_write = strlen(json_spec);
+    while (written < to_write) {
+        int written_now = write(fd, json_spec + written, to_write - written);
+        if (written_now < 0) {
+            perror("write");
+            return 1;
+        }
+        written += written_now;
+    }
+    return 0;
+}
 static int cmd_help(int argc, char** argv);
 
 static const command commands[] = {
