@@ -120,32 +120,43 @@ static int cmd_create(int argc, char **argv) {
 static int cmd_delete(int argc unused_attr, char **argv unused_attr) { return 1; }
 static int cmd_run(int argc unused_attr, char **argv unused_attr) { return 1; }
 static int cmd_start(int argc unused_attr, char **argv unused_attr) {
-    return 1;
-    // if (argc != 2) {
-    //     fprintf(stderr, "Invalid usage.\n");
-    //     return 1;
-    // }
+    if (argc != 2) {
+        fprintf(stderr, "Invalid usage.\n");
+        return 1;
+    }
 
-    // char *id = argv[1];
+    char *id = argv[1];
 
-    // const char *rd = runtime_dir();
-    // if (!rd) {
-    //     perror("runtime_dir");
-    //     return 1;
-    // }
-    // if (chdir(rd) < 0) {
-    //     perror("chdir");
-    //     return 1;
-    // }
-    // if (chdir(id) < 0) {
-    //     perror("chdir");
-    //     return 1;
-    // }
-    // char *state_json = read_all_file(STATE_FILENAME);
-    // if (!state_json) {
-    //     perror("state.json");
-    //     return 1;
-    // }
+    const char *rd = runtime_dir();
+    if (!rd) {
+        perror("runtime_dir");
+        return 1;
+    }
+    if (chdir(rd) < 0) {
+        perror("chdir");
+        return 1;
+    }
+    if (chdir(id) < 0) {
+        perror("chdir");
+        return 1;
+    }
+    char *state_json = read_all_file(STATE_FILENAME);
+    if (!state_json) {
+        perror("state.json");
+        return 1;
+    }
+    container *cont = container_from_state_json(state_json);
+    if (!cont) {
+        perror("parsing of state.json");
+        return 1;
+    }
+    if (cont->status != CONTAINER_CREATED) {
+        fprintf(stderr, "Container is not in created status.\n");
+        return 1;
+    }
+
+    // TODO: check container for correctness.
+    return run_container(cont);
 }
 static int cmd_kill(int argc unused_attr, char **argv unused_attr) { return 1; }
 static int cmd_spec(int argc, char **argv) {

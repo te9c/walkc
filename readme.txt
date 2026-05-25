@@ -5,7 +5,7 @@ TODO:
     1.1 [x] create
     1.2 [ ] delete
     1.3 [ ] run
-    1.4 [ ] start
+    1.4 [x] start
     1.5 [ ] kill
     1.6 [x] spec
     1.7 [x] state

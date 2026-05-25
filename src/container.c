@@ -145,87 +145,146 @@ fail:
     return NULL;
 }
 
-// static char container_stack[CONTAINER_STACK_SIZE];
+static char container_stack[CONTAINER_STACK_SIZE];
 
-// static int container_start(void *arg) {
-//     container *cont = (container *)arg;
-//     cont->pid = getpid();
-//     char old_root[PATH_MAX];
+static int container_start(void *arg) {
+    container *cont = (container *)arg;
+    cont->pid = getpid();
+    char old_root[PATH_MAX];
 
-//     if (mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL) == -1) {
-//         perror("mount MS_PRIVATE");
-//         return 1;
-//     }
+    if (mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL) == -1) {
+        perror("mount MS_PRIVATE");
+        return 1;
+    }
 
-//     if (mount(cont->spec->rootfs_path, cont->spec->rootfs_path, NULL,
-//         MS_BIND | MS_REC | (MS_RDONLY * cont->spec->rootfs_readonly), NULL) == -1) {
-//         perror("bind-mount rootfs");
-//         return 1;
-//     }
+    if (mount(cont->spec->rootfs_path, cont->spec->rootfs_path, NULL,
+        MS_BIND | MS_REC | (MS_RDONLY * cont->spec->rootfs_readonly), NULL) == -1) {
+        perror("bind-mount rootfs");
+        return 1;
+    }
 
-//     if (snprintf(old_root, sizeof(old_root), "%s/.old_root", cont->spec->rootfs_path) >= (int)sizeof(old_root)) {
-//         fprintf(stderr, "rootfs path too long\n");
-//         return 1;
-//     }
+    if (snprintf(old_root, sizeof(old_root), "%s/.old_root", cont->spec->rootfs_path) >= (int)sizeof(old_root)) {
+        fprintf(stderr, "rootfs path too long\n");
+        return 1;
+    }
 
-//     if (mkdir_if_needed(old_root, 0755) == -1) {
-//         perror("mkdir .old_root");
-//         return 1;
-//     }
+    if (mkdir_if_needed(old_root, 0755) == -1) {
+        perror("mkdir .old_root");
+        return 1;
+    }
 
-//     if (sys_pivot_root(cont->spec->rootfs_path, old_root) == -1) {
-//         perror("pivot_root");
-//         return 1;
-//     }
+    if (sys_pivot_root(cont->spec->rootfs_path, old_root) == -1) {
+        perror("pivot_root");
+        return 1;
+    }
 
-//     if (chdir("/") == -1) {
-//         perror("chdir");
-//         return 1;
-//     }
+    if (chdir("/") == -1) {
+        perror("chdir");
+        return 1;
+    }
 
-//     if (umount2("/.old_root", MNT_DETACH) == -1) {
-//         perror("umount old root");
-//         return 1;
-//     }
+    if (umount2("/.old_root", MNT_DETACH) == -1) {
+        perror("umount old root");
+        return 1;
+    }
 
-//     if (rmdir("/.old_root") == -1) {
-//         perror("rmdir old root");
-//         return 1;
-//     }
+    if (rmdir("/.old_root") == -1) {
+        perror("rmdir old root");
+        return 1;
+    }
 
-//     for (int i = 0; i < cont->spec->mount_count; ++i) {
-//         if (mkdir_if_needed(cont->spec->mounts[i].destination, 0555) < 0) {
-//             perror("mkdir");
-//             return 1;
-//         }
-//         if (mount(cont->spec->mounts[i].source,
-//                 cont->spec->mounts[i].destination,
-//                 cont->spec->mounts[i].type,
-//                 NULL, NULL) < 0) {
-//             perror("mount");
-//             return 1;
-//         }
-//     }
+    for (int i = 0; i < cont->spec->mount_count; ++i) {
+        if (mkdir_if_needed(cont->spec->mounts[i].destination, 0555) < 0) {
+            perror("mkdir");
+            return 1;
+        }
+        if (mount(cont->spec->mounts[i].source,
+                cont->spec->mounts[i].destination,
+                cont->spec->mounts[i].type,
+                0, NULL) < 0) {
+            perror("mount");
+            return 1;
+        }
+    }
 
-//     if (chdir(cont->spec->process.cwd) < 0) {
-//         perror("chdir");
-//         return 1;
-//     }
-//     execvp(cont->spec->process.argv[0], cont->spec->process.argv);
-//     perror("execvp");
-//     return 1;
-// }
+    if (chdir(cont->spec->process.cwd) < 0) {
+        perror("chdir");
+        return 1;
+    }
+
+    execvp(cont->spec->process.argv[0], cont->spec->process.argv);
+    perror("execvp");
+    return 1;
+}
 
 int run_container(container *cont) {
-    return 1;
-    // if (!cont || cont->status != CONTAINER_CREATED) {
-    //     return 1;
-    // }
+    if (!cont || cont->status != CONTAINER_CREATED) {
+        return 1;
+    }
 
-    // cont->pid = clone(
-    //     container_start,
-    //     container_stack + CONTAINER_STACK_SIZE,
-    //     CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWUTS | CLONE_NEWIPC | SIGCHLD,
-    //     cont
-    // );
+    cont->pid = clone(
+        container_start,
+        container_stack + CONTAINER_STACK_SIZE,
+        CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWUTS | CLONE_NEWIPC | SIGCHLD,
+        cont
+    );
+    if (cont->pid == -1) {
+        perror("pid");
+        return 1;
+    }
+    cont->status = CONTAINER_RUNNING;
+    char *state_json = container_to_state_json(cont);
+    if (!state_json) {
+        perror("container_to_state_json");
+        return 1;
+    }
+    const char *rd = runtime_dir();
+    if (!rd) {
+        perror("runtime_dir");
+        return 1;
+    }
+    if (chdir(rd) < 0) {
+        perror("chdir");
+        return 1;
+    }
+    if (chdir(cont->id) < 0) {
+        perror("chdir");
+        return 1;
+    }
+    if (create_file_with_content(STATE_FILENAME, state_json) < 0) {
+        perror("state.json");
+        return 1;
+    }
+
+    free(state_json);
+    state_json = NULL;
+
+    int status;
+    if (waitpid(cont->pid, &status, 0) == -1) {
+        perror("waitpid");
+        return 1;
+    }
+
+    cont->status = CONTAINER_STOPPED;
+    cont->pid = 0;
+
+    state_json = container_to_state_json(cont);
+    if (!state_json) {
+        perror("container_to_state_json");
+        return 1;
+    }
+    if (create_file_with_content(STATE_FILENAME, state_json) < 0) {
+        perror("state.json");
+        return 1;
+    }
+
+    if (WIFEXITED(status)) {
+        return WEXITSTATUS(status);
+    }
+
+    if (WIFSIGNALED(status)) {
+        fprintf(stderr, "container killed by signal %d\n", WTERMSIG(status));
+    }
+
+    return 1;
 }
