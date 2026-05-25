@@ -117,7 +117,54 @@ static int cmd_create(int argc, char **argv) {
     }
     return 0;
 }
-static int cmd_delete(int argc unused_attr, char **argv unused_attr) { return 1; }
+static int cmd_delete(int argc unused_attr, char **argv unused_attr) {
+    if (argc != 2) {
+        fprintf(stderr, "Invalid usage.\n");
+        return 1;
+    }
+
+    char *id = argv[1];
+    const char *rd = runtime_dir();
+    if (!rd) {
+        perror("runtime_dir\n");
+        return 1;
+    }
+    if (chdir(rd) < 0) {
+        perror("chdir\n");
+    }
+    if (chdir(id) < 0) {
+        perror("chdir");
+    }
+
+    char *state_json = read_all_file(STATE_FILENAME);
+    if (!state_json) {
+        perror("read_all_file");
+        return 1;
+    }
+    container *cont = container_from_state_json(state_json);
+    if (!cont) {
+        perror("container_from_state_json");
+        return 1;
+    }
+    if (cont->status != CONTAINER_CREATED && cont->status != CONTAINER_STOPPED) {
+        fprintf(stderr, "Container status should be either created or stopped\n");
+        return 1;
+    }
+
+    if (unlink(STATE_FILENAME) < 0) {
+        perror("unlink");
+        return 1;
+    }
+    if (chdir(rd) < 0) {
+        perror("chdir");
+        return 1;
+    }
+    if (rmdir(id) < 0) {
+        perror("rmdir");
+        return 1;
+    }
+    return 0;
+}
 static int cmd_run(int argc unused_attr, char **argv unused_attr) { return 1; }
 static int cmd_start(int argc unused_attr, char **argv unused_attr) {
     if (argc != 2) {
