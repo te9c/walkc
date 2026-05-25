@@ -1,4 +1,5 @@
 #include "spec.h"
+#include "utils.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -77,46 +78,6 @@ config_spec *get_default_spec() {
 
     strcpy(spec->hostname, DEFAULT_HOSTNAME);
     return spec;
-}
-
-
-static int copy_bounded(char *dst, size_t dstsz, const char *src) {
-    size_t n;
-
-    if (!dst || !src || dstsz == 0) return -1;
-    n = strlen(src);
-    if (n >= dstsz) return -1;
-
-    memcpy(dst, src, n + 1);
-    return 0;
-}
-
-static int get_string_field(json_object *obj, const char *key,
-                            char *dst, size_t dstsz, int required) {
-    json_object *tmp = NULL;
-
-    if (!json_object_object_get_ex(obj, key, &tmp)) {
-        return required ? -1 : 0;
-    }
-    if (!json_object_is_type(tmp, json_type_string)) return -1;
-
-    return copy_bounded(dst, dstsz, json_object_get_string(tmp));
-}
-
-static int get_int_field(json_object *obj, const char *key,
-                         int *out, int required) {
-    json_object *tmp = NULL;
-
-    if (!json_object_object_get_ex(obj, key, &tmp)) {
-        return required ? -1 : 0;
-    }
-    if (!json_object_is_type(tmp, json_type_int) &&
-        !json_object_is_type(tmp, json_type_boolean)) {
-        return -1;
-    }
-
-    *out = json_object_get_int(tmp);
-    return 0;
 }
 
 char *spec_to_json(const config_spec *spec) {
@@ -210,20 +171,20 @@ config_spec *spec_from_json(const char *json) {
     }
     if (!spec) goto fail;
 
-    if (get_string_field(root, "ociVersion",
+    if (get_string_field_json(root, "ociVersion",
             spec->oci_version, sizeof(spec->oci_version), 1) < 0) goto fail;
 
-    if (get_string_field(root, "hostname",
+    if (get_string_field_json(root, "hostname",
             spec->hostname, sizeof(spec->hostname), 0) < 0) goto fail;
 
     if (!json_object_object_get_ex(root, "root", &rootfs)) goto fail;
     if (!json_object_is_type(rootfs, json_type_object)) goto fail;
 
     char rootfs_relative[PATH_MAX];
-    if (get_string_field(rootfs, "path",
+    if (get_string_field_json(rootfs, "path",
             rootfs_relative, sizeof(rootfs_relative), 1) < 0) goto fail;
     if (!realpath(rootfs_relative, spec->rootfs_path)) goto fail;
-    if (get_int_field(rootfs, "readonly",
+    if (get_int_field_json(rootfs, "readonly",
             &spec->rootfs_readonly, 0) < 0) goto fail;
 
     if (mounts) {
@@ -234,13 +195,13 @@ config_spec *spec_from_json(const char *json) {
 
             if (!jm || !json_object_is_type(jm, json_type_object)) goto fail;
 
-            if (get_string_field(jm, "destination",
+            if (get_string_field_json(jm, "destination",
                     spec->mounts[i].destination,
                     sizeof(spec->mounts[i].destination), 1) < 0) goto fail;
-            if (get_string_field(jm, "source",
+            if (get_string_field_json(jm, "source",
                     spec->mounts[i].source,
                     sizeof(spec->mounts[i].source), 1) < 0) goto fail;
-            if (get_string_field(jm, "type",
+            if (get_string_field_json(jm, "type",
                     spec->mounts[i].type,
                     sizeof(spec->mounts[i].type), 1) < 0) goto fail;
 
@@ -276,8 +237,8 @@ config_spec *spec_from_json(const char *json) {
         if (!json_object_is_type(proc, json_type_object)) goto fail;
         spec->has_process = 1;
 
-        if (get_int_field(proc, "terminal", &spec->process.terminal, 0) < 0) goto fail;
-        if (get_string_field(proc, "cwd",
+        if (get_int_field_json(proc, "terminal", &spec->process.terminal, 0) < 0) goto fail;
+        if (get_string_field_json(proc, "cwd",
                 spec->process.cwd, sizeof(spec->process.cwd), 1) < 0) goto fail;
 
         if (json_object_object_get_ex(proc, "args", &jargs)) {

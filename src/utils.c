@@ -117,3 +117,42 @@ int create_file_with_content(const char *path, const char *content) {
 
     return 0;
 }
+
+int copy_bounded(char *dst, size_t dstsz, const char *src) {
+    size_t n;
+
+    if (!dst || !src || dstsz == 0) return -1;
+    n = strlen(src);
+    if (n >= dstsz) return -1;
+
+    memcpy(dst, src, n + 1);
+    return 0;
+}
+
+int get_string_field_json(json_object *obj, const char *key,
+                            char *dst, size_t dstsz, int required) {
+    json_object *tmp = NULL;
+
+    if (!json_object_object_get_ex(obj, key, &tmp)) {
+        return required ? -1 : 0;
+    }
+    if (!json_object_is_type(tmp, json_type_string)) return -1;
+
+    return copy_bounded(dst, dstsz, json_object_get_string(tmp));
+}
+
+int get_int_field_json(json_object *obj, const char *key,
+                         int *out, int required) {
+    json_object *tmp = NULL;
+
+    if (!json_object_object_get_ex(obj, key, &tmp)) {
+        return required ? -1 : 0;
+    }
+    if (!json_object_is_type(tmp, json_type_int) &&
+        !json_object_is_type(tmp, json_type_boolean)) {
+        return -1;
+    }
+
+    *out = json_object_get_int(tmp);
+    return 0;
+}
