@@ -1,4 +1,4 @@
-### walkc - simple educational implementation of container runtime.
+### walkc - simple educational implementation of a container runtime.
 
 TODO:
 1. CLI
