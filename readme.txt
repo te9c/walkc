@@ -10,7 +10,7 @@ TODO:
     1.6 [x] spec
     1.7 [ ] state
     1.8 [x] help
-2. Runtime featuers
+2. Runtime features
     2.1 [ ] pivot_root and namespace isolation
     2.2 [ ] Capabilities isolation
     2.3 [ ] Mounts
