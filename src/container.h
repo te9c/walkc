@@ -11,7 +11,8 @@ typedef enum container_status {
     CONTAINER_CREATING = 0,
     CONTAINER_CREATED,
     CONTAINER_RUNNING,
-    CONTAINER_STOPPED
+    CONTAINER_STOPPED,
+    CONTAINER_UNKNOWN
 } container_status;
 
 
@@ -27,6 +28,7 @@ typedef struct container {
 int run_container(container *cont);
 
 const char *container_status_to_string(container_status st);
+container_status string_to_container_status(const char *s);
 char *container_to_state_json(container *cont);
-container container_from_state_json(const char* state);
+container *container_from_state_json(const char* state);
 #endif
