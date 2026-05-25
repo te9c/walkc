@@ -8,7 +8,7 @@ TODO:
     1.4 [ ] start
     1.5 [ ] kill
     1.6 [x] spec
-    1.7 [ ] state
+    1.7 [x] state
     1.8 [x] help
 2. Runtime features
     2.1 [ ] pivot_root and namespace isolation

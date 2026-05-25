@@ -19,12 +19,12 @@
 typedef int (*cmd_fn)(int argc, char **argv);
 
 typedef struct command {
-    const char* name;
+    const char *name;
     cmd_fn run;
-    const char* summary;
+    const char *summary;
 } command;
 
-static int cmd_create(int argc, char** argv) {
+static int cmd_create(int argc, char **argv) {
     // options:
     // --bundle: path to bundle (default is current directory)
     static struct option long_options[] = {
@@ -63,7 +63,7 @@ static int cmd_create(int argc, char** argv) {
         perror("chdir");
         return 1;
     }
-    char *spec_file_contents = read_all_file(SPEC_CONFIG_FILENAME);
+    char *spec_file_contents = read_all_file(CONFIG_FILENAME);
     if (!spec_file_contents) {
         perror("config.json");
         return 1;
@@ -117,10 +117,37 @@ static int cmd_create(int argc, char** argv) {
     }
     return 0;
 }
-static int cmd_delete(int argc unused_attr, char** argv unused_attr) { return 1; }
-static int cmd_run(int argc unused_attr, char** argv unused_attr) { return 1; }
-static int cmd_start(int argc unused_attr, char** argv unused_attr) { return 1; }
-static int cmd_kill(int argc unused_attr, char** argv unused_attr) { return 1; }
+static int cmd_delete(int argc unused_attr, char **argv unused_attr) { return 1; }
+static int cmd_run(int argc unused_attr, char **argv unused_attr) { return 1; }
+static int cmd_start(int argc unused_attr, char **argv unused_attr) {
+    return 1;
+    // if (argc != 2) {
+    //     fprintf(stderr, "Invalid usage.\n");
+    //     return 1;
+    // }
+
+    // char *id = argv[1];
+
+    // const char *rd = runtime_dir();
+    // if (!rd) {
+    //     perror("runtime_dir");
+    //     return 1;
+    // }
+    // if (chdir(rd) < 0) {
+    //     perror("chdir");
+    //     return 1;
+    // }
+    // if (chdir(id) < 0) {
+    //     perror("chdir");
+    //     return 1;
+    // }
+    // char *state_json = read_all_file(STATE_FILENAME);
+    // if (!state_json) {
+    //     perror("state.json");
+    //     return 1;
+    // }
+}
+static int cmd_kill(int argc unused_attr, char **argv unused_attr) { return 1; }
 static int cmd_spec(int argc, char **argv) {
     static struct option long_options[] = {
         {"bundle", required_argument, 0, 'b'},
@@ -150,7 +177,7 @@ static int cmd_spec(int argc, char **argv) {
         perror("chdir");
         return 1;
     }
-    if (access(SPEC_CONFIG_FILENAME, F_OK) == 0) {
+    if (access(CONFIG_FILENAME, F_OK) == 0) {
         fprintf(stderr, "config.json already exists\n");
         return 1;
     }
@@ -160,7 +187,7 @@ static int cmd_spec(int argc, char **argv) {
         return 1;
     }
     char *json_spec = spec_to_json(spec);
-    int fd = open(SPEC_CONFIG_FILENAME, O_WRONLY | O_CREAT, 0644);
+    int fd = open(CONFIG_FILENAME, O_WRONLY | O_CREAT, 0644);
     if (fd < 0) {
         perror("open");
         return 1;
@@ -177,8 +204,29 @@ static int cmd_spec(int argc, char **argv) {
     }
     return 0;
 }
-static int cmd_state(int argc unused_attr, char **argv unused_attr) {
-    return 1;
+static int cmd_state(int argc, char **argv) {
+    if (argc != 2) {
+        fprintf(stderr, "invalid usage\n");
+        return 1;
+    }
+    char *id = argv[1];
+    const char *rd = runtime_dir();
+    if (!rd) {
+        perror("runtime_dir");
+        return 1;
+    }
+    if (chdir(rd) < 0) {
+        perror("chdir");
+        return 1;
+    }
+    if (chdir(id) < 0) {
+        perror("chdir");
+        return 1;
+    }
+    char *state_json = read_all_file(STATE_FILENAME);
+    printf("%s\n", state_json);
+    
+    return 0;
 }
 static int cmd_help(int argc, char** argv);
 
