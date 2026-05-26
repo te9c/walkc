@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdio.h>
+#include <signal.h>
 
 char _runtime_dir[PATH_MAX];
 int _runtime_dir_set = 0;
@@ -155,4 +156,115 @@ int get_int_field_json(json_object *obj, const char *key,
 
     *out = json_object_get_int(tmp);
     return 0;
+}
+
+int sigstr_to_num(const char *sigstr) {
+    char *end;
+    long v;
+
+    if (sigstr == NULL || *sigstr == '\0')
+        return -1;
+
+    errno = 0;
+    v = strtol(sigstr, &end, 10);
+    if (errno == 0 && *end == '\0' && v > 0 && v < NSIG)
+        return (int)v;
+
+    if (strncmp(sigstr, "SIG", 3) == 0)
+        sigstr += 3;
+
+#define SIGCASE(name) do { \
+    if (strcmp(sigstr, #name) == 0) return SIG##name; \
+} while (0)
+
+#ifdef SIGHUP
+    SIGCASE(HUP);
+#endif
+#ifdef SIGINT
+    SIGCASE(INT);
+#endif
+#ifdef SIGQUIT
+    SIGCASE(QUIT);
+#endif
+#ifdef SIGILL
+    SIGCASE(ILL);
+#endif
+#ifdef SIGTRAP
+    SIGCASE(TRAP);
+#endif
+#ifdef SIGABRT
+    SIGCASE(ABRT);
+#endif
+#ifdef SIGBUS
+    SIGCASE(BUS);
+#endif
+#ifdef SIGFPE
+    SIGCASE(FPE);
+#endif
+#ifdef SIGKILL
+    SIGCASE(KILL);
+#endif
+#ifdef SIGUSR1
+    SIGCASE(USR1);
+#endif
+#ifdef SIGSEGV
+    SIGCASE(SEGV);
+#endif
+#ifdef SIGUSR2
+    SIGCASE(USR2);
+#endif
+#ifdef SIGPIPE
+    SIGCASE(PIPE);
+#endif
+#ifdef SIGALRM
+    SIGCASE(ALRM);
+#endif
+#ifdef SIGTERM
+    SIGCASE(TERM);
+#endif
+#ifdef SIGCHLD
+    SIGCASE(CHLD);
+#endif
+#ifdef SIGCONT
+    SIGCASE(CONT);
+#endif
+#ifdef SIGSTOP
+    SIGCASE(STOP);
+#endif
+#ifdef SIGTSTP
+    SIGCASE(TSTP);
+#endif
+#ifdef SIGTTIN
+    SIGCASE(TTIN);
+#endif
+#ifdef SIGTTOU
+    SIGCASE(TTOU);
+#endif
+#ifdef SIGURG
+    SIGCASE(URG);
+#endif
+#ifdef SIGXCPU
+    SIGCASE(XCPU);
+#endif
+#ifdef SIGXFSZ
+    SIGCASE(XFSZ);
+#endif
+#ifdef SIGVTALRM
+    SIGCASE(VTALRM);
+#endif
+#ifdef SIGPROF
+    SIGCASE(PROF);
+#endif
+#ifdef SIGWINCH
+    SIGCASE(WINCH);
+#endif
+#ifdef SIGPOLL
+    SIGCASE(POLL);
+#endif
+#ifdef SIGSYS
+    SIGCASE(SYS);
+#endif
+
+#undef SIGCASE
+    return -1;
 }

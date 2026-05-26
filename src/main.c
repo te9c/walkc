@@ -7,6 +7,7 @@
 #include <getopt.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <signal.h>
 
 #include "container.h"
 // #include "metadata.h"
@@ -35,7 +36,7 @@ static int cmd_create(int argc, char **argv) {
     int c;
     while ((c = getopt_long(argc, argv, "b:", long_options, NULL)) != -1) {
         switch (c) {
-            case 'b':
+            case 'b': {
                 int ln = strlen(optarg);
                 if (ln >= PATH_MAX) {
                     fprintf(stderr, "bundle argument is too big.\n");
@@ -43,6 +44,7 @@ static int cmd_create(int argc, char **argv) {
                 }
                 strcpy(bundle_path, optarg);
                 break;
+            }
             case '?':
                 return 1;
         }
@@ -165,7 +167,10 @@ static int cmd_delete(int argc unused_attr, char **argv unused_attr) {
     }
     return 0;
 }
-static int cmd_run(int argc unused_attr, char **argv unused_attr) { return 1; }
+static int cmd_run(int argc unused_attr, char **argv unused_attr) {
+    fprintf(stderr, "todo\n");
+    return 1;
+}
 static int cmd_start(int argc unused_attr, char **argv unused_attr) {
     if (argc != 2) {
         fprintf(stderr, "Invalid usage.\n");
@@ -205,7 +210,56 @@ static int cmd_start(int argc unused_attr, char **argv unused_attr) {
     // TODO: check container for correctness.
     return run_container(cont);
 }
-static int cmd_kill(int argc unused_attr, char **argv unused_attr) { return 1; }
+static int cmd_kill(int argc unused_attr, char **argv unused_attr) {
+    if (argc != 2 && argc != 3) {
+        fprintf(stderr, "Invalid usage\n");
+        return 1;
+    }
+    char *id = argv[1];
+    char *sig_arg = argc == 3 ? argv[2] : "SIGTERM";
+
+    int signo = sigstr_to_num(sig_arg);
+    if (signo < 0) {
+        fprintf(stderr, "Invalid signal\n");
+        return 1;
+    }
+
+    const char *rd = runtime_dir();
+    if (!rd) {
+        perror("runtime_dir");
+        return 1;
+    }
+    if (chdir(rd) < 0) {
+        perror("chdir");
+        return 1;
+    }
+    if (chdir(id) < 0) {
+        perror("chdir");
+        return 1;
+    }
+
+    char *state_json = read_all_file(STATE_FILENAME);
+    if (!state_json) {
+        perror("state.json");
+        return 1;
+    }
+    container *cont = container_from_state_json(state_json);
+    if (!cont) {
+        perror("parsing of state.json");
+        return 1;
+    }
+    if (cont->status != CONTAINER_RUNNING) {
+        fprintf(stderr, "container should be in running state");
+        return 1;
+    }
+
+    pid_t p = cont->pid;
+    if (kill(p, signo) < 0) {
+        perror("kill");
+        return 1;
+    }
+    return 0;
+}
 static int cmd_spec(int argc, char **argv) {
     static struct option long_options[] = {
         {"bundle", required_argument, 0, 'b'},
@@ -215,7 +269,7 @@ static int cmd_spec(int argc, char **argv) {
     int c;
     while ((c = getopt_long(argc, argv, "b:", long_options, NULL)) != -1) {
         switch (c) {
-            case 'b':
+            case 'b': {
                 int ln = strlen(optarg);
                 if (ln >= PATH_MAX) {
                     fprintf(stderr, "bundle argument is too big.\n");
@@ -223,6 +277,7 @@ static int cmd_spec(int argc, char **argv) {
                 }
                 strcpy(bundle_path, optarg);
                 break;
+            }
             case '?':
                 return 1;
         }
