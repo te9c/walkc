@@ -6,7 +6,7 @@ TODO:
     1.2 [x] delete
     1.3 [ ] run
     1.4 [x] start
-    1.5 [ ] kill
+    1.5 [x] kill
     1.6 [x] spec
     1.7 [x] state
     1.8 [x] help
