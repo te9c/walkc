@@ -1,6 +1,6 @@
 TARGET := walkc
 CC := gcc
-CFLAGS := -Wall -Wextra -Wpedantic -g -O0
+CFLAGS := -std=c17 -Wall -Wextra -Wpedantic -g -O0
 LDFLAGS := -ljson-c
 SRC_DIR := src
 BUILD_DIR := build
