@@ -39,10 +39,10 @@ void free_spec(config_spec* spec) {
     free(spec->mounts);
 
     if (spec->has_process) {
-        for (int i = 0; i < spec->process.argc; ++i) {
-            free(spec->process.argv[i]);
+        for (int i = 0; i < spec->process.argument_count; ++i) {
+            free(spec->process.arguments[i]);
         }
-        free(spec->process.argv);
+        free(spec->process.arguments);
     }
     free(spec);
 }
@@ -61,19 +61,19 @@ config_spec *get_default_spec(void) {
     strcpy(spec->mounts[0].source, "proc");
 
     strcpy(spec->process.cwd, "/");
-    spec->process.argv = malloc(sizeof(char*));
-    if (!spec->process.argv) {
+    spec->process.arguments = malloc(sizeof(char*));
+    if (!spec->process.arguments) {
         free_spec(spec);
         return NULL;
     }
-    spec->process.argv[0] = malloc(sizeof(DEFUALT_RUN_PROGRAM));
-    if (!spec->process.argv[0]) {
-        free(spec->process.argv);
+    spec->process.arguments[0] = malloc(sizeof(DEFUALT_RUN_PROGRAM));
+    if (!spec->process.arguments[0]) {
+        free(spec->process.arguments);
         free_spec(spec);
         return NULL;
     }
-    strcpy(spec->process.argv[0], DEFUALT_RUN_PROGRAM);
-    spec->process.argc = 1;
+    strcpy(spec->process.arguments[0], DEFUALT_RUN_PROGRAM);
+    spec->process.argument_count = 1;
     spec->has_process = 1;
 
     strcpy(spec->hostname, DEFAULT_HOSTNAME);
@@ -134,9 +134,9 @@ char *spec_to_json(const config_spec *spec) {
         json_object_object_add(proc, "cwd",
             json_object_new_string(spec->process.cwd));
 
-        for (i = 0; i < spec->process.argc; ++i) {
+        for (i = 0; i < spec->process.argument_count; ++i) {
             json_object_array_add(jargv,
-                json_object_new_string(spec->process.argv[i]));
+                json_object_new_string(spec->process.arguments[i]));
         }
 
         json_object_object_add(proc, "args", jargv);
@@ -245,11 +245,12 @@ config_spec *spec_from_json(const char *json) {
             if (!json_object_is_type(jargs, json_type_array)) goto fail;
 
             argc = (int)json_object_array_length(jargs);
-            spec->process.argc = argc;
+            spec->process.argument_count = argc;
 
             if (argc > 0) {
-                spec->process.argv = calloc((size_t)argc, sizeof(*spec->process.argv));
-                if (!spec->process.argv) goto fail;
+                spec->process.arguments = calloc((size_t)argc + 1, sizeof(*spec->process.arguments));
+                if (!spec->process.arguments) goto fail;
+                spec->process.arguments[argc] = NULL;
 
                 for (j = 0; j < argc; ++j) {
                     json_object *arg = json_object_array_get_idx(jargs, (size_t)j);
@@ -257,8 +258,8 @@ config_spec *spec_from_json(const char *json) {
 
                     if (!arg || !json_object_is_type(arg, json_type_string)) goto fail;
                     s = json_object_get_string(arg);
-                    spec->process.argv[j] = strdup(s);
-                    if (!spec->process.argv[j]) goto fail;
+                    spec->process.arguments[j] = strdup(s);
+                    if (!spec->process.arguments[j]) goto fail;
                 }
             }
         }

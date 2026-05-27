@@ -217,7 +217,12 @@ static int container_start(void *arg) {
         return 1;
     }
 
-    execvp(cont->spec->process.argv[0], cont->spec->process.argv);
+    int argc = cont->spec->process.argument_count;
+    char *argv = malloc(argc + 1);
+    memcpy(argv, cont->spec->process.arguments, argc * sizeof(char*));
+    argv[argc] = NULL;
+
+    execvp(argv[0], argv);
     perror("execvp");
     return 1;
 }

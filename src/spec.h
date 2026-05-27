@@ -19,8 +19,8 @@ typedef struct mount_option {
 typedef struct process_option {
     int terminal; // if terminal is attached to the process (?)
     char cwd[PATH_MAX];
-    char **argv;
-    int argc;
+    char **arguments;
+    int argument_count;
 } process_option;
 
 typedef struct config_spec {
