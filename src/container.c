@@ -212,6 +212,11 @@ static int container_start(void *arg) {
         return 1;
     }
 
+    if (sethostname(cont->spec->hostname, strlen(cont->spec->hostname)) < 0) {
+        perror("sethostname");
+        return 1;
+    }
+
     execvp(cont->spec->process.argv[0], cont->spec->process.argv);
     perror("execvp");
     return 1;

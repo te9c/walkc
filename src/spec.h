@@ -35,7 +35,7 @@ typedef struct config_spec {
     process_option process;
     int has_process;
 
-    char hostname[PATH_MAX];
+    char hostname[HOST_NAME_MAX];
 } config_spec;
 
 config_spec *alloc_spec(int mount_count);
