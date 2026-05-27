@@ -10,7 +10,6 @@
 #include <signal.h>
 
 #include "container.h"
-// #include "metadata.h"
 #include "spec.h"
 #include "config.h"
 #include "utils.h"
@@ -25,41 +24,43 @@ typedef struct command {
     const char *summary;
 } command;
 
-static int cmd_create(int argc, char **argv) {
-    // options:
-    // --bundle: path to bundle (default is current directory)
-    static struct option long_options[] = {
-        {"bundle", required_argument, 0, 'b'},
-        {0,0,0,0}
-    };
-    char bundle_path[PATH_MAX] = DEFAULT_BUNDLE_PATH;
-    int c;
-    while ((c = getopt_long(argc, argv, "b:", long_options, NULL)) != -1) {
-        switch (c) {
-            case 'b': {
-                int ln = strlen(optarg);
-                if (ln >= PATH_MAX) {
-                    fprintf(stderr, "bundle argument is too big.\n");
-                    return 1;
-                }
-                strcpy(bundle_path, optarg);
-                break;
-            }
-            case '?':
-                return 1;
-        }
-    }
-    if (optind == argc) {
-        fprintf(stderr, "Expected id.\n");
+static int cmd_start_internal(const char *id) {
+    const char *rd = runtime_dir();
+    if (!rd) {
+        perror("runtime_dir");
         return 1;
     }
-    char* id = argv[optind];
+    if (chdir(rd) < 0) {
+        perror("chdir");
+        return 1;
+    }
+    if (chdir(id) < 0) {
+        perror("chdir");
+        return 1;
+    }
+    char *state_json = read_all_file(STATE_FILENAME);
+    if (!state_json) {
+        perror("state.json");
+        return 1;
+    }
+    container *cont = container_from_state_json(state_json);
+    if (!cont) {
+        perror("parsing of state.json");
+        return 1;
+    }
+    if (cont->status != CONTAINER_CREATED) {
+        fprintf(stderr, "Container is not in created status.\n");
+        return 1;
+    }
+
+    // TODO: check container for correctness.
+    return run_container(cont);
+}
+
+static int cmd_create_internal(const char *id, const char *bundle_path) {
     if (strlen(id) >= ID_MAX) {
         fprintf(stderr, "Id is too big.\n");
         return 1;
-    }
-    if (optind + 1 != argc) {
-        fprintf(stderr, "Invalid usage.\n");
     }
     if (chdir(bundle_path) < 0) {
         perror("chdir");
@@ -119,6 +120,43 @@ static int cmd_create(int argc, char **argv) {
     }
     return 0;
 }
+
+static int cmd_create(int argc, char **argv) {
+    // options:
+    // --bundle: path to bundle (default is current directory)
+    static struct option long_options[] = {
+        {"bundle", required_argument, 0, 'b'},
+        {0,0,0,0}
+    };
+    char bundle_path[PATH_MAX] = DEFAULT_BUNDLE_PATH;
+    int c;
+    while ((c = getopt_long(argc, argv, "b:", long_options, NULL)) != -1) {
+        switch (c) {
+            case 'b': {
+                int ln = strlen(optarg);
+                if (ln >= PATH_MAX) {
+                    fprintf(stderr, "bundle argument is too big.\n");
+                    return 1;
+                }
+                strcpy(bundle_path, optarg);
+                break;
+            }
+            case '?':
+                return 1;
+        }
+    }
+    if (optind == argc) {
+        fprintf(stderr, "Expected id.\n");
+        return 1;
+    }
+    if (optind + 1 != argc) {
+        fprintf(stderr, "Invalid usage.\n");
+    }
+
+    char *id = argv[optind];
+
+    return cmd_create_internal(id, bundle_path);
+}
 static int cmd_delete(int argc unused_attr, char **argv unused_attr) {
     if (argc != 2) {
         fprintf(stderr, "Invalid usage.\n");
@@ -168,9 +206,43 @@ static int cmd_delete(int argc unused_attr, char **argv unused_attr) {
     return 0;
 }
 static int cmd_run(int argc unused_attr, char **argv unused_attr) {
-    fprintf(stderr, "todo\n");
-    return 1;
+    static struct option long_options[] = {
+        {"bundle", required_argument, 0, 'b'},
+        {0,0,0,0}
+    };
+    char bundle_path[PATH_MAX] = DEFAULT_BUNDLE_PATH;
+    int c;
+    while ((c = getopt_long(argc, argv, "b:", long_options, NULL)) != -1) {
+        switch (c) {
+            case 'b': {
+                int ln = strlen(optarg);
+                if (ln >= PATH_MAX) {
+                    fprintf(stderr, "bundle argument is too big.\n");
+                    return 1;
+                }
+                strcpy(bundle_path, optarg);
+                break;
+            }
+            case '?':
+                return 1;
+        }
+    }
+    if (optind + 1 != argc) {
+        fprintf(stderr, "Invalid usage.\n");
+        return 1;
+    }
+    char *id = argv[optind];
+
+    if (cmd_create_internal(id, bundle_path) < 0) {
+        return 1;
+    }
+    if (cmd_start_internal(id) < 0) {
+        return 1;
+    }
+
+    return 0;
 }
+
 static int cmd_start(int argc unused_attr, char **argv unused_attr) {
     if (argc != 2) {
         fprintf(stderr, "Invalid usage.\n");
@@ -178,37 +250,7 @@ static int cmd_start(int argc unused_attr, char **argv unused_attr) {
     }
 
     char *id = argv[1];
-
-    const char *rd = runtime_dir();
-    if (!rd) {
-        perror("runtime_dir");
-        return 1;
-    }
-    if (chdir(rd) < 0) {
-        perror("chdir");
-        return 1;
-    }
-    if (chdir(id) < 0) {
-        perror("chdir");
-        return 1;
-    }
-    char *state_json = read_all_file(STATE_FILENAME);
-    if (!state_json) {
-        perror("state.json");
-        return 1;
-    }
-    container *cont = container_from_state_json(state_json);
-    if (!cont) {
-        perror("parsing of state.json");
-        return 1;
-    }
-    if (cont->status != CONTAINER_CREATED) {
-        fprintf(stderr, "Container is not in created status.\n");
-        return 1;
-    }
-
-    // TODO: check container for correctness.
-    return run_container(cont);
+    return cmd_start_internal(id);
 }
 static int cmd_kill(int argc unused_attr, char **argv unused_attr) {
     if (argc != 2 && argc != 3) {
@@ -300,20 +342,9 @@ static int cmd_spec(int argc, char **argv) {
         return 1;
     }
     char *json_spec = spec_to_json(spec);
-    int fd = open(CONFIG_FILENAME, O_WRONLY | O_CREAT, 0644);
-    if (fd < 0) {
-        perror("open");
+    if (create_file_with_content(CONFIG_FILENAME, json_spec) < 0) {
+        perror("config.json");
         return 1;
-    }
-    int written = 0;
-    int to_write = strlen(json_spec);
-    while (written < to_write) {
-        int written_now = write(fd, json_spec + written, to_write - written);
-        if (written_now < 0) {
-            perror("write");
-            return 1;
-        }
-        written += written_now;
     }
     return 0;
 }
@@ -341,7 +372,7 @@ static int cmd_state(int argc, char **argv) {
     
     return 0;
 }
-static int cmd_help(int argc, char** argv);
+static int cmd_help(int argc, char **argv);
 
 static const command commands[] = {
     { "create",    cmd_create,    "create container" },
@@ -358,7 +389,7 @@ static const int command_count = sizeof(commands) / sizeof(command);
 
 #define SPACES_PREFIX 2
 #define SPACES_MIDDLE 2
-static int cmd_help(int argc unused_attr, char** argv unused_attr) {
+static int cmd_help(int argc unused_attr, char **argv unused_attr) {
     int longest_command = 0;
     for (int i = 0; i < command_count; ++i) {
         if ((int)strlen(commands[i].name) > longest_command) {
@@ -382,7 +413,7 @@ static int cmd_help(int argc unused_attr, char** argv unused_attr) {
     return 0;
 }
 
-const command* find_command(const char* name) {
+const command *find_command(const char *name) {
     for (int i = 0; i < command_count; ++i) {
         if (strcmp(commands[i].name, name) == 0) {
             return &commands[i];
@@ -391,7 +422,7 @@ const command* find_command(const char* name) {
     return NULL;
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
     // TODO: global options (-v)
     if (argc < 2) {
         cmd_help(argc, argv);
@@ -421,7 +452,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    const command* cmd = find_command(argv[1]);
+    const command *cmd = find_command(argv[1]);
     if (!cmd) {
         fprintf(stderr, "Invalid command.\n");
         return 1;

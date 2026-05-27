@@ -4,7 +4,7 @@ TODO:
 1. CLI
     1.1 [x] create
     1.2 [x] delete
-    1.3 [ ] run
+    1.3 [x] run
     1.4 [x] start
     1.5 [x] kill
     1.6 [x] spec
