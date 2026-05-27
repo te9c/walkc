@@ -47,7 +47,7 @@ void free_spec(config_spec* spec) {
     free(spec);
 }
 
-config_spec *get_default_spec() {
+config_spec *get_default_spec(void) {
     config_spec *spec = alloc_spec(1);
     if (!spec)
         return NULL;

@@ -26,7 +26,7 @@ int mkdir_if_needed(const char *path, mode_t mode) {
     return 0;
 }
 
-const char *runtime_dir() {
+const char *runtime_dir(void) {
     if (_runtime_dir_set)
         return _runtime_dir;
 
