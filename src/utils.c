@@ -20,7 +20,18 @@ int sys_pivot_root(const char *new_root, const char *put_old) {
 }
 
 int mkdir_if_needed(const char *path, mode_t mode) {
-    if (mkdir(path, mode) == -1 && errno != EEXIST) {
+    if (mkdir(path, mode) == -1) {
+        if (errno == EEXIST) {
+            struct stat st;
+            if (stat(path, &st) < 0) {
+                return -1;
+            }
+            if ((st.st_mode & S_IFMT) != S_IFDIR) {
+                errno = ENOTDIR;
+                return -1;
+            }
+            return 0;
+        }
         return -1;
     }
     return 0;
@@ -34,12 +45,10 @@ const char *runtime_dir(void) {
     if (!s) {
         strcpy(_runtime_dir, FALLBACK_RUNTIME_DIR);
         goto create_runtime_dir;
-        // _runtime_dir_set = 1;
-        // return _runtime_dir;
     }
     int len = strlen(s);
     if (len + sizeof(RUNTIME_DIR_NAME) + 1 >= PATH_MAX) {
-        fprintf(stderr, "runtime path is to big.\n");
+        errno = ENAMETOOLONG;
         return NULL;
     }
     strcpy(_runtime_dir, s);
@@ -51,7 +60,7 @@ const char *runtime_dir(void) {
     strcpy(_runtime_dir + len, RUNTIME_DIR_NAME);
 
 create_runtime_dir:
-    if (mkdir(_runtime_dir, 0700) < 0 && errno != EEXIST) {
+    if (mkdir_if_needed(_runtime_dir, 0700) < 0) {
         return NULL;
     }
     _runtime_dir_set = 1;

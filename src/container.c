@@ -205,7 +205,7 @@ static int container_start(void *arg) {
         return 1;
     }
 
-    if (mkdir_if_needed(old_root, 0755) == -1) {
+    if (mkdir_if_needed(old_root, 0755) == 0) {
         perror("mkdir .old_root");
         return 1;
     }
@@ -232,7 +232,7 @@ static int container_start(void *arg) {
 
     for (int i = 0; i < cont->spec->mount_count; ++i) {
         if (mkdir_if_needed(cont->spec->mounts[i].destination, 0555) < 0) {
-            perror("mkdir");
+            perror("mkdir_if_needed");
             return 1;
         }
         char *data = alloc_option_string(cont->spec->mounts[i].options, cont->spec->mounts[i].option_count);
