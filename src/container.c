@@ -27,7 +27,7 @@ const char *container_status_to_string(container_status st) {
         default:                 return "unknown";
     }
 }
-container_status string_to_container_status(const char *s) {
+container_status container_status_from_string(const char *s) {
     if (!s)
         return CONTAINER_UNKNOWN;
     if (strcmp(s, "creating") == 0)
@@ -117,7 +117,7 @@ container* container_from_state_json(const char *json) {
     char status_string[32];
     if (get_string_field_json(root, "status",
             status_string, sizeof(status_string), 1) < 0) goto fail;
-    cont->status = string_to_container_status(status_string);
+    cont->status = container_status_from_string(status_string);
 
     if (get_int_field_json(root, "pid", &cont->pid, 1) < 0) goto fail;
     if (get_string_field_json(root, "bundle", cont->bundle, sizeof(cont->bundle), 1) < 0) goto fail;

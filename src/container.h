@@ -8,11 +8,11 @@
 #include <sched.h>
 
 typedef enum container_status {
-    CONTAINER_CREATING = 0,
+    CONTAINER_UNKNOWN = 0,
+    CONTAINER_CREATING,
     CONTAINER_CREATED,
     CONTAINER_RUNNING,
-    CONTAINER_STOPPED,
-    CONTAINER_UNKNOWN
+    CONTAINER_STOPPED
 } container_status;
 
 
@@ -28,7 +28,7 @@ typedef struct container {
 int run_container(container *cont);
 
 const char *container_status_to_string(container_status st);
-container_status string_to_container_status(const char *s);
+container_status container_status_from_string(const char *s);
 char *container_to_state_json(container *cont);
 container *container_from_state_json(const char* state);
 #endif
