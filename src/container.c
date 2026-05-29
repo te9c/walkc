@@ -218,7 +218,7 @@ static int container_start(void *arg) {
     }
 
     int argc = cont->spec->process.argument_count;
-    char *argv = malloc(argc + 1);
+    char **argv = (char **)calloc(argc + 1, sizeof(char *));
     memcpy(argv, cont->spec->process.arguments, argc * sizeof(char*));
     argv[argc] = NULL;
 
