@@ -152,7 +152,7 @@ config_spec *get_default_spec(void) {
     return spec;
 }
 
-char *spec_to_json(const config_spec *spec) {
+char *spec_to_json(const config_spec *spec, int flags) {
     json_object *root, *rootfs, *mounts, *proc;
     const char *tmp;
     char *out;
@@ -217,7 +217,7 @@ char *spec_to_json(const config_spec *spec) {
         json_object_object_add(root, "process", proc);
     }
 
-    tmp = json_object_to_json_string_ext(root, JSON_C_TO_STRING_PRETTY | JSON_C_TO_STRING_NOSLASHESCAPE);
+    tmp = json_object_to_json_string_ext(root, flags);
     out = tmp ? strdup(tmp) : NULL;
 
     json_object_put(root);

@@ -1,6 +1,8 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include <json-c/json.h>
+
 #define OCI_VERSION "1.0.0"
 #define DEFAULT_BUNDLE_PATH "."
 #define CONFIG_FILENAME "config.json"
@@ -14,5 +16,6 @@
 #define RUNTIME_DIR_NAME "walkc"
 #define ID_MAX 128
 #define CONTAINER_STACK_SIZE (1024 * 1024)
+#define JSON_TO_STRING_DEFAULT_FLAGS (JSON_C_TO_STRING_PRETTY | JSON_C_TO_STRING_NOSLASHESCAPE)
 
 #endif

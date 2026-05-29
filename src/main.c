@@ -342,7 +342,7 @@ static int cmd_spec(int argc, char **argv) {
         perror("default_spec");
         return 1;
     }
-    char *json_spec = spec_to_json(spec);
+    char *json_spec = spec_to_json(spec, JSON_TO_STRING_DEFAULT_FLAGS);
     if (create_file_with_content(CONFIG_FILENAME, json_spec) < 0) {
         perror("config.json");
         return 1;

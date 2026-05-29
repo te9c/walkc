@@ -42,7 +42,7 @@ config_spec *alloc_spec(int mount_count);
 void free_spec(config_spec *spec);
 config_spec *get_default_spec(void);
 
-char *spec_to_json(const config_spec *spec);
+char *spec_to_json(const config_spec *spec, int flags);
 config_spec *spec_from_json(const char *json);
 
 #endif
