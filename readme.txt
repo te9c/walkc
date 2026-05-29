@@ -11,9 +11,9 @@ TODO:
     1.7 [x] state
     1.8 [x] help
 2. Runtime features
-    2.1 [ ] pivot_root and namespace isolation
+    2.1 [x] pivot_root and namespace isolation
     2.2 [ ] Capabilities isolation
-    2.3 [ ] Mounts
+    2.3 [/] Mounts
     2.4 [ ] User control
     2.5 [ ] Cgroups and resource control
 3. Etc
