@@ -31,7 +31,7 @@ void free_spec(config_spec* spec) {
         return;
     
     for (int i = 0; i < spec->mount_count; ++i) {
-        for (int j = 0; j < spec->mounts[i].options_count; ++i) {
+        for (int j = 0; j < spec->mounts[i].option_count; ++i) {
             free(spec->mounts[i].options[j]);
         }
         free(spec->mounts[i].options);
@@ -47,8 +47,27 @@ void free_spec(config_spec* spec) {
     free(spec);
 }
 
+int fill_mount(mount_option *opt, const char *dest,
+            const char *type, const char *source, const char *options[], int option_count) {
+    if (!opt) return 1;
+    memset(opt, 0, sizeof(*opt));
+    if (dest) { strcpy(opt->destination, dest); }
+    if (type) { strcpy(opt->type, type); }
+    if (source) { strcpy(opt->source, source); }
+    if (options) {
+        opt->option_count = option_count;
+        opt->options = calloc(option_count, sizeof(char *));
+        if (!opt->options) return 1;
+        for (int i = 0; i < option_count; ++i) {
+            opt->options[i] = strdup(options[i]);
+            if (!opt->options[i]) return 1;
+        }
+    }
+    return 0;
+}
+
 config_spec *get_default_spec(void) {
-    config_spec *spec = alloc_spec(1);
+    config_spec *spec = alloc_spec(5);
     if (!spec)
         return NULL;
 
@@ -56,9 +75,62 @@ config_spec *get_default_spec(void) {
     strcpy(spec->rootfs_path, DEFAULT_ROOTFS_PATH);
     spec->rootfs_readonly = 0;
 
-    strcpy(spec->mounts[0].destination, "/proc");
-    strcpy(spec->mounts[0].type, "proc");
-    strcpy(spec->mounts[0].source, "proc");
+    if (fill_mount(
+            &spec->mounts[0],
+            "/proc",
+            "proc",
+            "proc",
+            NULL,
+            0
+    ) < 0) {
+        free_spec(spec);
+        return NULL;
+    }
+
+    if (fill_mount(
+            &spec->mounts[1],
+            "/dev",
+            "dev",
+            "dev",
+            (const char *[]) { "nosuid", "strictatime", "mode=755", "size=65536k" },
+            4) < 0) {
+        free_spec(spec);
+        return NULL;
+    }
+
+    if (fill_mount(
+            &spec->mounts[2],
+            "/dev/pts",
+            "devpts",
+            "devpts",
+            (const char *[]) { "nosuid", "noexec", "newinstance", "ptmxmode=0666", "mode=0620", "gid=5" },
+            6) < 0) {
+        free_spec(spec);
+        return NULL;
+    }
+
+    if (fill_mount(
+            &spec->mounts[3],
+            "/dev/shm",
+            "tmpfs",
+            "shm",
+            (const char *[]) { "nosuid", "noexec", "nodev", "mode=1777", "size=65536k" },
+            5) < 0) {
+        free_spec(spec);
+        return NULL;
+    }
+
+    if (fill_mount(
+        &spec->mounts[4],
+        "/sys",
+        "sysfs",
+        "sysfs",
+        (const char *[]) { "nosuid", "noexec", "nodev", "ro" },
+        4) < 0) {
+        free_spec(spec);
+        return NULL;
+    }
+
 
     strcpy(spec->process.cwd, "/");
     spec->process.arguments = malloc(sizeof(char*));
@@ -68,7 +140,7 @@ config_spec *get_default_spec(void) {
     }
     spec->process.arguments[0] = malloc(sizeof(DEFUALT_RUN_PROGRAM));
     if (!spec->process.arguments[0]) {
-        free(spec->process.arguments);
+        // free(spec->process.arguments);
         free_spec(spec);
         return NULL;
     }
@@ -115,12 +187,14 @@ char *spec_to_json(const config_spec *spec) {
         json_object_object_add(jm, "type",
             json_object_new_string(spec->mounts[i].type));
 
-        for (j = 0; j < spec->mounts[i].options_count; ++j) {
-            json_object_array_add(jopts,
-                json_object_new_string(spec->mounts[i].options[j]));
+        if (spec->mounts[i].options) {
+            for (j = 0; j < spec->mounts[i].option_count; ++j) {
+                json_object_array_add(jopts,
+                    json_object_new_string(spec->mounts[i].options[j]));
+            }
+            json_object_object_add(jm, "options", jopts);
         }
 
-        json_object_object_add(jm, "options", jopts);
         json_object_array_add(mounts, jm);
     }
     json_object_object_add(root, "mounts", mounts);
@@ -209,7 +283,7 @@ config_spec *spec_from_json(const char *json) {
                 if (!json_object_is_type(jopts, json_type_array)) goto fail;
 
                 n = (int)json_object_array_length(jopts);
-                spec->mounts[i].options_count = n;
+                spec->mounts[i].option_count = n;
 
                 if (n > 0) {
                     spec->mounts[i].options =

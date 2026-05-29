@@ -13,7 +13,7 @@ typedef struct mount_option {
     char source[PATH_MAX];
     char type[TYPE_MAX];
     char **options;
-    int options_count;
+    int option_count;
 } mount_option;
 
 typedef struct process_option {
