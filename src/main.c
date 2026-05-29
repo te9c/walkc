@@ -171,9 +171,11 @@ static int cmd_delete(int argc unused_attr, char **argv unused_attr) {
     }
     if (chdir(rd) < 0) {
         perror("chdir\n");
+        return 1;
     }
     if (chdir(id) < 0) {
         perror("chdir");
+        return 1;
     }
 
     char *state_json = read_all_file(STATE_FILENAME);
