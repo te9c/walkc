@@ -91,7 +91,7 @@ char *container_to_state_json(container *cont) {
     }
 
     const char *tmp = json_object_to_json_string_ext(root, JSON_C_TO_STRING_NOSLASHESCAPE);
-    if (tmp == NULL) {
+    if (!tmp) {
         json_object_put(root);
         return NULL;
     }
@@ -101,9 +101,10 @@ char *container_to_state_json(container *cont) {
     return out;
 }
 
-container* container_from_state_json(const char *json) {
+container *container_from_state_json(const char *json) {
     json_object *root = NULL, *config = NULL;
-    container* cont = (container *)malloc(sizeof(container));
+    container *cont = calloc(1, sizeof(*cont));
+    if (!cont) return NULL;
 
     if (!json) goto fail;
 
@@ -111,37 +112,40 @@ container* container_from_state_json(const char *json) {
     if (!root) goto fail;
     if (!json_object_is_type(root, json_type_object)) goto fail;
 
-    if (get_string_field_json(root, "id",
-            cont->id, sizeof(cont->id), 1) < 0) goto fail;
-    
+    if (get_string_field_json(root, "id", cont->id, sizeof(cont->id), 1) < 0)
+        goto fail;
+
     char status_string[32];
-    if (get_string_field_json(root, "status",
-            status_string, sizeof(status_string), 1) < 0) goto fail;
+    if (get_string_field_json(root, "status", status_string, sizeof(status_string), 1) < 0)
+        goto fail;
     cont->status = container_status_from_string(status_string);
 
-    if (get_int_field_json(root, "pid", &cont->pid, 1) < 0) goto fail;
-    if (get_string_field_json(root, "bundle", cont->bundle, sizeof(cont->bundle), 1) < 0) goto fail;
+    if (get_int_field_json(root, "pid", &cont->pid, 1) < 0)
+        goto fail;
+    if (get_string_field_json(root, "bundle", cont->bundle, sizeof(cont->bundle), 1) < 0)
+        goto fail;
 
     if (!json_object_object_get_ex(root, "config", &config) ||
-            !json_object_is_type(config, json_type_object)) {
+        !json_object_is_type(config, json_type_object)) {
         goto fail;
     }
 
     const char *tmp = json_object_to_json_string_ext(config, 0);
     if (!tmp) goto fail;
+
     cont->spec = spec_from_json(tmp);
     if (!cont->spec) goto fail;
 
-    json_object_put(config);
     json_object_put(root);
     return cont;
+
 fail:
+    if (root)
+        json_object_put(root);
     if (cont) {
         free_spec(cont->spec);
         free(cont);
     }
-    json_object_put(config);
-    json_object_put(root);
     return NULL;
 }
 
@@ -272,22 +276,6 @@ int run_container(container *cont) {
         return 1;
     }
 
-    cont->pid = clone(
-        container_start,
-        container_stack + CONTAINER_STACK_SIZE,
-        CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWUTS | CLONE_NEWIPC | SIGCHLD,
-        cont
-    );
-    if (cont->pid == -1) {
-        perror("pid");
-        return 1;
-    }
-    cont->status = CONTAINER_RUNNING;
-    char *state_json = container_to_state_json(cont);
-    if (!state_json) {
-        perror("container_to_state_json");
-        return 1;
-    }
     const char *rd = runtime_dir();
     if (!rd) {
         perror("runtime_dir");
@@ -301,11 +289,30 @@ int run_container(container *cont) {
         perror("chdir");
         return 1;
     }
-    if (create_file_with_content(STATE_FILENAME, state_json) < 0) {
-        perror("state.json");
+    cont->status = CONTAINER_RUNNING;
+    char *state_json = container_to_state_json(cont);
+    if (!state_json) {
+        perror("container_to_state_json");
         return 1;
     }
 
+    cont->pid = clone(
+        container_start,
+        container_stack + CONTAINER_STACK_SIZE,
+        CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWUTS | CLONE_NEWIPC | SIGCHLD,
+        cont
+    );
+
+    if (cont->pid == -1) {
+        free(state_json);
+        perror("clone");
+        return 1;
+    }
+    if (create_file_with_content(STATE_FILENAME, state_json) < 0) {
+        perror("state.json");
+        free(state_json);
+        return 1;
+    }
     free(state_json);
     state_json = NULL;
 
@@ -325,8 +332,10 @@ int run_container(container *cont) {
     }
     if (create_file_with_content(STATE_FILENAME, state_json) < 0) {
         perror("state.json");
+        free(state_json);
         return 1;
     }
+    free(state_json);
 
     if (WIFEXITED(status)) {
         return WEXITSTATUS(status);

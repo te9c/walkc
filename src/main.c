@@ -44,17 +44,23 @@ static int cmd_start_internal(const char *id) {
         return 1;
     }
     container *cont = container_from_state_json(state_json);
+    free(state_json);
     if (!cont) {
         perror("parsing of state.json");
         return 1;
     }
     if (cont->status != CONTAINER_CREATED) {
         fprintf(stderr, "Container is not in created status.\n");
+        free_spec(cont->spec);
+        free(cont);
         return 1;
     }
 
     // TODO: check container for correctness.
-    return run_container(cont);
+    int ret = run_container(cont);
+    free_spec(cont->spec);
+    free(cont);
+    return ret;
 }
 
 static int cmd_create_internal(const char *id, const char *bundle_path) {
@@ -66,58 +72,73 @@ static int cmd_create_internal(const char *id, const char *bundle_path) {
         perror("chdir");
         return 1;
     }
-    char *spec_file_contents = read_all_file(CONFIG_FILENAME);
-    if (!spec_file_contents) {
-        perror("config.json");
-        return 1;
-    }
-
     container cont;
     cont.status = CONTAINER_CREATED;
     cont.pid = 0;
     strcpy(cont.id, id);
+
+    char *config = read_all_file(CONFIG_FILENAME);
+    if (!config) {
+        perror("config.json");
+        return 1;
+    }
+
     if (!realpath(bundle_path, cont.bundle)) {
         perror("realpath");
+        free(config);
         return 1;
     }
-    cont.spec = spec_from_json(spec_file_contents);
+    cont.spec = spec_from_json(config);
     if (!cont.spec) {
         perror("spec_from_json");
+        free(config);
         return 1;
     }
+    free(config);
 
 
     const char *rd = runtime_dir();
     if (!rd) {
         perror("runtime dir");
+        free_spec(cont.spec);
         return 1;
     }
 
     if (chdir(rd) < 0) {
         perror("chdir");
+        free_spec(cont.spec);
         return 1;
     }
     if (chdir(id) == 0) {
         fprintf(stderr, "id already exists\n");
+        free_spec(cont.spec);
         return 1;
     }
     if (mkdir(id, 0700) < 0) {
         perror("mkdir");
+        free_spec(cont.spec);
         return 1;
     }
     if (chdir(id) < 0) {
         perror("chdir");
+        free_spec(cont.spec);
         return 1;
     }
 
     char *container_state_json = container_to_state_json(&cont);
     if (!container_state_json) {
         perror("container_to_state_json");
+        free_spec(cont.spec);
         return 1;
     }
     if (create_file_with_content(STATE_FILENAME, container_state_json) < 0) {
+        free_spec(cont.spec);
+        free(container_state_json);
         return 1;
     }
+
+    free_spec(cont.spec);
+    free(container_state_json);
     return 0;
 }
 
@@ -151,6 +172,7 @@ static int cmd_create(int argc, char **argv) {
     }
     if (optind + 1 != argc) {
         fprintf(stderr, "Invalid usage.\n");
+        return 1;
     }
 
     char *id = argv[optind];
@@ -186,12 +208,19 @@ static int cmd_delete(int argc unused_attr, char **argv unused_attr) {
     container *cont = container_from_state_json(state_json);
     if (!cont) {
         perror("container_from_state_json");
+        free(state_json);
         return 1;
     }
     if (cont->status != CONTAINER_CREATED && cont->status != CONTAINER_STOPPED) {
         fprintf(stderr, "Container status should be either created or stopped\n");
+        free(state_json);
+        free_spec(cont->spec);
+        free(cont);
         return 1;
     }
+    free(state_json);
+    free_spec(cont->spec);
+    free(cont);
 
     if (unlink(STATE_FILENAME) < 0) {
         perror("unlink");
@@ -205,6 +234,7 @@ static int cmd_delete(int argc unused_attr, char **argv unused_attr) {
         perror("rmdir");
         return 1;
     }
+
     return 0;
 }
 
@@ -237,10 +267,13 @@ static int cmd_run(int argc unused_attr, char **argv unused_attr) {
     }
     char *id = argv[optind];
 
+    // return 1;
+
     int ret;
     if ((ret = cmd_create_internal(id, bundle_path)) != 0) {
         return ret;
     }
+
     if ((ret = cmd_start_internal(id)) != 0) {
         return ret;
     }
@@ -291,16 +324,21 @@ static int cmd_kill(int argc unused_attr, char **argv unused_attr) {
         return 1;
     }
     container *cont = container_from_state_json(state_json);
+    free(state_json);
     if (!cont) {
         perror("parsing of state.json");
         return 1;
     }
     if (cont->status != CONTAINER_RUNNING) {
         fprintf(stderr, "container should be in running state");
+        free_spec(cont->spec);
+        free(cont);
         return 1;
     }
 
     pid_t p = cont->pid;
+    free_spec(cont->spec);
+    free(cont);
     if (kill(p, signo) < 0) {
         perror("kill");
         return 1;
@@ -347,10 +385,12 @@ static int cmd_spec(int argc, char **argv) {
         return 1;
     }
     char *json_spec = spec_to_json(spec, JSON_TO_STRING_DEFAULT_FLAGS);
+    free_spec(spec);
     if (create_file_with_content(CONFIG_FILENAME, json_spec) < 0) {
         perror("config.json");
         return 1;
     }
+    free(json_spec);
     return 0;
 }
 static int cmd_state(int argc, char **argv) {
@@ -374,6 +414,7 @@ static int cmd_state(int argc, char **argv) {
     }
     char *state_json = read_all_file(STATE_FILENAME);
     printf("%s\n", state_json);
+    free(state_json);
     
     return 0;
 }

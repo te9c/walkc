@@ -31,15 +31,19 @@ void free_spec(config_spec* spec) {
     if (!spec)
         return;
     
-    for (int i = 0; i < spec->mount_count; ++i) {
-        for (int j = 0; j < spec->mounts[i].option_count; ++i) {
-            free(spec->mounts[i].options[j]);
+    if (spec->mounts) {
+        for (int i = 0; i < spec->mount_count; ++i) {
+            if (spec->mounts[i].options) {
+                for (int j = 0; j < spec->mounts[i].option_count; ++j) {
+                    free(spec->mounts[i].options[j]);
+                }
+                free(spec->mounts[i].options);
+            }
         }
-        free(spec->mounts[i].options);
+        free(spec->mounts);
     }
-    free(spec->mounts);
 
-    if (spec->has_process) {
+    if (spec->process.arguments) {
         for (int i = 0; i < spec->process.argument_count; ++i) {
             free(spec->process.arguments[i]);
         }
@@ -180,7 +184,6 @@ char *spec_to_json(const config_spec *spec, int flags) {
     mounts = json_object_new_array();
     for (i = 0; i < spec->mount_count; ++i) {
         json_object *jm = json_object_new_object();
-        json_object *jopts = json_object_new_array();
 
         json_object_object_add(jm, "destination",
             json_object_new_string(spec->mounts[i].destination));
@@ -190,6 +193,7 @@ char *spec_to_json(const config_spec *spec, int flags) {
             json_object_new_string(spec->mounts[i].type));
 
         if (spec->mounts[i].options) {
+            json_object *jopts = json_object_new_array();
             for (j = 0; j < spec->mounts[i].option_count; ++j) {
                 json_object_array_add(jopts,
                     json_object_new_string(spec->mounts[i].options[j]));
