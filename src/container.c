@@ -145,6 +145,39 @@ fail:
     return NULL;
 }
 
+char *alloc_option_string(char **options, int option_count) {
+    if (option_count == 0 || !options)
+        return NULL;
+    int sz = 0;
+    int op_count = 0;
+    for (int i = 0; i < option_count; ++i) {
+        if (apply_mount_option(NULL, options[i]))
+            continue;
+    
+        sz += strlen(options[i]);
+        op_count += 1;
+    }
+    if (op_count == 0)
+        return NULL;
+    sz += op_count;
+    char *s = malloc(sz * sizeof(char));
+    if (!s) {
+        return NULL;
+    }
+
+    char *cur_pos = s;
+    for (int i = 0; i < option_count; ++i) {
+        if (apply_mount_option(NULL, options[i]))
+            continue;
+        cur_pos = stpcpy(cur_pos, options[i]);
+        *cur_pos = ',';
+        ++cur_pos;
+    }
+    --cur_pos;
+    *cur_pos = '\0';
+    return s;
+}
+
 static char container_stack[CONTAINER_STACK_SIZE];
 
 static int container_start(void *arg) {
@@ -198,13 +231,20 @@ static int container_start(void *arg) {
             perror("mkdir");
             return 1;
         }
+        char *data = alloc_option_string(cont->spec->mounts[i].options, cont->spec->mounts[i].option_count);
+        int flags = 0;
+        for (int j = 0; j < cont->spec->mounts[i].option_count; ++j) {
+            apply_mount_option(&flags, cont->spec->mounts[i].options[j]);
+        }
         if (mount(cont->spec->mounts[i].source,
                 cont->spec->mounts[i].destination,
                 cont->spec->mounts[i].type,
-                0, NULL) < 0) {
+                flags, data) < 0) {
             perror("mount");
+            free(data);
             return 1;
         }
+        free(data);
     }
 
     if (chdir(cont->spec->process.cwd) < 0) {

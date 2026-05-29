@@ -207,6 +207,8 @@ static int cmd_delete(int argc unused_attr, char **argv unused_attr) {
     }
     return 0;
 }
+
+// BUG: malloc() smallbin linked list corrupted.
 static int cmd_run(int argc unused_attr, char **argv unused_attr) {
     static struct option long_options[] = {
         {"bundle", required_argument, 0, 'b'},

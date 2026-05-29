@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <json-c/json.h>
+#include <sys/mount.h>
 
 
 config_spec* alloc_spec(int mount_count) {
@@ -90,7 +91,7 @@ config_spec *get_default_spec(void) {
     if (fill_mount(
             &spec->mounts[1],
             "/dev",
-            "dev",
+            "devtmpfs",
             "dev",
             (const char *[]) { "nosuid", "strictatime", "mode=755", "size=65536k" },
             4) < 0) {
@@ -145,6 +146,7 @@ config_spec *get_default_spec(void) {
         return NULL;
     }
     strcpy(spec->process.arguments[0], DEFUALT_RUN_PROGRAM);
+    spec->process.terminal = 1;
     spec->process.argument_count = 1;
     spec->has_process = 1;
 
@@ -346,4 +348,44 @@ fail:
     json_object_put(root);
     free_spec(spec);
     return NULL;
+}
+
+int apply_mount_option(int *flags, const char *option) {
+    if (!option) return 0;
+    int dummy = 0;
+    if (!flags)
+        flags = &dummy;
+
+    if (strcmp(option, "ro") == 0) {
+        *flags |= MS_RDONLY;
+    } else if (strcmp(option, "rw") == 0) {
+        *flags &= ~MS_RDONLY;
+    } else if (strcmp(option, "nosuid") == 0) {
+        *flags |= MS_NOSUID;
+    } else if (strcmp(option, "suid") == 0) {
+        *flags &= ~MS_NOSUID;
+    } else if (strcmp(option, "noexec") == 0) {
+        *flags |= MS_NOEXEC;
+    } else if (strcmp(option, "exec") == 0) {
+        *flags &= ~MS_NOEXEC;
+    } else if (strcmp(option, "nodev") == 0) {
+        *flags |= MS_NODEV;
+    } else if (strcmp(option, "dev") == 0) {
+        *flags &= ~MS_NODEV;
+    } else if (strcmp(option, "noatime") == 0) {
+        *flags |= MS_NOATIME;
+        *flags &= ~(MS_RELATIME | MS_STRICTATIME);
+    } else if (strcmp(option, "nodiratime") == 0) {
+        *flags |= MS_NODIRATIME;
+    } else if (strcmp(option, "relatime") == 0) {
+        *flags |= MS_RELATIME;
+        *flags &= ~(MS_NOATIME | MS_STRICTATIME);
+    } else if (strcmp(option, "strictatime") == 0) {
+        *flags |= MS_STRICTATIME;
+        *flags &= ~(MS_NOATIME | MS_RELATIME);
+    } else {
+        return 0;
+    }
+
+    return 1;
 }

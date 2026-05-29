@@ -45,4 +45,8 @@ config_spec *get_default_spec(void);
 char *spec_to_json(const config_spec *spec, int flags);
 config_spec *spec_from_json(const char *json);
 
+// returns 0 if option is not mount option.
+// flags could be NULL to check if option is mount option.
+int apply_mount_option(int *flags, const char *option);
+
 #endif
