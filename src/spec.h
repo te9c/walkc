@@ -8,13 +8,13 @@
 #include <limits.h>
 #include <stddef.h>
 
-typedef struct mount_option {
+typedef struct mount_entry {
     char destination[PATH_MAX];
     char source[PATH_MAX];
     char type[TYPE_MAX];
     char **options;
     int option_count;
-} mount_option;
+} mount_entry;
 
 typedef struct process_option {
     int terminal; // if terminal is attached to the process (?)
@@ -29,7 +29,7 @@ typedef struct config_spec {
     char rootfs_path[PATH_MAX];
     int rootfs_readonly;
 
-    mount_option *mounts;
+    mount_entry *mounts;
     int mount_count;
 
     process_option process;

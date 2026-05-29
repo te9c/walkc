@@ -17,12 +17,12 @@ config_spec *alloc_spec(int mount_count) {
     
     memset(spec, 0, sizeof(config_spec));
     spec->mount_count = mount_count;
-    spec->mounts = malloc(sizeof(mount_option) * mount_count);
+    spec->mounts = malloc(sizeof(mount_entry) * mount_count);
     if (!spec->mounts) {
         free(spec);
         return NULL;
     }
-    memset(spec->mounts, 0, mount_count * sizeof(mount_option));
+    memset(spec->mounts, 0, mount_count * sizeof(mount_entry));
 
     return spec;
 }
@@ -52,7 +52,7 @@ void free_spec(config_spec *spec) {
     free(spec);
 }
 
-int fill_mount(mount_option *opt, const char *dest,
+int fill_mount(mount_entry *opt, const char *dest,
             const char *type, const char *source, const char *options[], int option_count) {
     if (!opt) return 1;
     memset(opt, 0, sizeof(*opt));
