@@ -233,11 +233,12 @@ static int cmd_run(int argc unused_attr, char **argv unused_attr) {
     }
     char *id = argv[optind];
 
-    if (cmd_create_internal(id, bundle_path) < 0) {
-        return 1;
+    int ret;
+    if ((ret = cmd_create_internal(id, bundle_path)) != 0) {
+        return ret;
     }
-    if (cmd_start_internal(id) < 0) {
-        return 1;
+    if ((ret = cmd_start_internal(id)) != 0) {
+        return ret;
     }
 
     return 0;
