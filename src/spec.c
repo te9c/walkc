@@ -7,10 +7,10 @@
 #include <sys/mount.h>
 
 
-config_spec* alloc_spec(int mount_count) {
+config_spec *alloc_spec(int mount_count) {
     if (mount_count < 0)
         return NULL;
-    config_spec* spec = malloc(sizeof(config_spec));
+    config_spec *spec = malloc(sizeof(config_spec));
 
     if (!spec)
         return NULL;
@@ -27,7 +27,7 @@ config_spec* alloc_spec(int mount_count) {
     return spec;
 }
 
-void free_spec(config_spec* spec) {
+void free_spec(config_spec *spec) {
     if (!spec)
         return;
     
@@ -138,7 +138,7 @@ config_spec *get_default_spec(void) {
 
 
     strcpy(spec->process.cwd, "/");
-    spec->process.arguments = malloc(sizeof(char*));
+    spec->process.arguments = malloc(sizeof(char *));
     if (!spec->process.arguments) {
         free_spec(spec);
         return NULL;

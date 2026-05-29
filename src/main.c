@@ -379,7 +379,7 @@ static int cmd_spec(int argc, char **argv) {
         fprintf(stderr, "config.json already exists\n");
         return 1;
     }
-    config_spec* spec = get_default_spec();
+    config_spec *spec = get_default_spec();
     if (!spec) {
         perror("default_spec");
         return 1;
