@@ -205,7 +205,7 @@ static int container_start(void *arg) {
         return 1;
     }
 
-    if (mkdir_if_needed(old_root, 0755) == 0) {
+    if (mkdir_if_needed(old_root, 0755) == -1) {
         perror("mkdir .old_root");
         return 1;
     }
