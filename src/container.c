@@ -270,10 +270,17 @@ static int container_start(void *arg) {
 
     int argc = cont->spec->process.argument_count;
     char **argv = (char **)calloc(argc + 1, sizeof(char *));
-    memcpy(argv, cont->spec->process.arguments, argc * sizeof(char*));
+    memcpy(argv, cont->spec->process.arguments, argc * sizeof(char *));
     argv[argc] = NULL;
 
-    execvp(argv[0], argv);
+    int env_count = cont->spec->process.env_count;
+    char **envp = (char **)calloc(env_count + 1, sizeof(char *));
+    envp[env_count] = NULL;
+    if (env_count) {
+        memcpy(envp, cont->spec->process.env, env_count * sizeof(char *));
+    }
+
+    execvpe(argv[0], argv, envp);
     perror("execvp");
     return 1;
 }

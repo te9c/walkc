@@ -21,6 +21,8 @@ typedef struct process_option {
     char cwd[PATH_MAX];
     char **arguments;
     int argument_count;
+    char **env;
+    int env_count;
 } process_option;
 
 typedef struct config_spec {

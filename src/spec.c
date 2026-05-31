@@ -49,6 +49,12 @@ void free_spec(config_spec *spec) {
         }
         free(spec->process.arguments);
     }
+    if (spec->process.env) {
+        for (int i = 0; i < spec->process.env_count; ++i) {
+            free(spec->process.env[i]);
+        }
+        free(spec->process.env);
+    }
     free(spec);
 }
 
@@ -145,13 +151,26 @@ config_spec *get_default_spec(void) {
     }
     spec->process.arguments[0] = malloc(sizeof(DEFUALT_RUN_PROGRAM));
     if (!spec->process.arguments[0]) {
-        // free(spec->process.arguments);
         free_spec(spec);
         return NULL;
     }
     strcpy(spec->process.arguments[0], DEFUALT_RUN_PROGRAM);
-    spec->process.terminal = 1;
     spec->process.argument_count = 1;
+
+    spec->process.env = calloc(2, sizeof(*spec->process.env));
+    if (!spec->process.env) {
+        free_spec(spec);
+        return NULL;
+    }
+    spec->process.env[0] = strdup("PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin");
+    spec->process.env[1] = strdup("TERM=xterm");
+    spec->process.env_count = 2;
+    if (!spec->process.env[0] || !spec->process.env[1]) {
+        free_spec(spec);
+        return NULL;
+    }
+
+    spec->process.terminal = 1;
     spec->has_process = 1;
 
     strcpy(spec->hostname, DEFAULT_HOSTNAME);
@@ -217,6 +236,15 @@ char *spec_to_json(const config_spec *spec, int flags) {
         for (i = 0; i < spec->process.argument_count; ++i) {
             json_object_array_add(jargv,
                 json_object_new_string(spec->process.arguments[i]));
+        }
+
+        if (spec->process.env_count) {
+            json_object *jenv = json_object_new_array();
+            for (i = 0; i < spec->process.env_count; ++i) {
+                json_object_array_add(jenv,
+                    json_object_new_string(spec->process.env[i]));
+            }
+            json_object_object_add(proc, "env", jenv);
         }
 
         json_object_object_add(proc, "args", jargv);
@@ -311,8 +339,8 @@ config_spec *spec_from_json(const char *json) {
     }
 
     if (json_object_object_get_ex(root, "process", &proc)) {
-        json_object *jargs = NULL;
-        int j, argc;
+        json_object *jargs = NULL, *jenv = NULL;
+        int j, argc, envc;
 
         if (!json_object_is_type(proc, json_type_object)) goto fail;
         spec->has_process = 1;
@@ -340,6 +368,28 @@ config_spec *spec_from_json(const char *json) {
                     s = json_object_get_string(arg);
                     spec->process.arguments[j] = strdup(s);
                     if (!spec->process.arguments[j]) goto fail;
+                }
+            }
+        }
+        if (json_object_object_get_ex(proc, "env", &jenv)) {
+            if (!json_object_is_type(jenv, json_type_array)) goto fail;
+
+            envc = (int)json_object_array_length(jenv);
+            spec->process.env_count = envc;
+
+            if (envc > 0) {
+                spec->process.env = calloc((size_t)envc + 1, sizeof(*spec->process.env));
+                if (!spec->process.env) goto fail;
+                spec->process.env[envc] = NULL;
+
+                for (j = 0; j < envc; ++j) {
+                    json_object *env = json_object_array_get_idx(jenv, (size_t)j);
+                    const char *s;
+
+                    if (!env || !json_object_is_type(env, json_type_string)) goto fail;
+                    s = json_object_get_string(env);
+                    spec->process.env[j] = strdup(s);
+                    if (!spec->process.env[j]) goto fail;
                 }
             }
         }
