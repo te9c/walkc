@@ -195,7 +195,7 @@ static int container_start(void *arg) {
     }
 
     if (mount(cont->spec->rootfs_path, cont->spec->rootfs_path, NULL,
-        MS_BIND | MS_REC | (MS_RDONLY * cont->spec->rootfs_readonly), NULL) == -1) {
+        MS_BIND | MS_REC, NULL) == -1) {
         perror("bind-mount rootfs");
         return 1;
     }
@@ -254,6 +254,13 @@ static int container_start(void *arg) {
     if (chdir(cont->spec->process.cwd) < 0) {
         perror("chdir");
         return 1;
+    }
+
+    if (cont->spec->rootfs_readonly) {
+        if (mount(NULL, "/", NULL, MS_RDONLY | MS_REMOUNT | MS_BIND, NULL) < 0) {
+            perror("mount RDONLY");
+            return 1;
+        }
     }
 
     if (sethostname(cont->spec->hostname, strlen(cont->spec->hostname)) < 0) {
