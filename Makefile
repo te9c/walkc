@@ -40,4 +40,4 @@ tags:
 clean:
 	rm -rf $(BUILD_DIR) $(TARGET)
 
-.PHONY: all clean run sanitize run-sanitize
+.PHONY: all clean run sanitize run-sanitize tags
