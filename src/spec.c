@@ -415,10 +415,10 @@ config_spec *spec_from_json(const char *json) {
         if (json_object_object_get_ex(proc, "user", &juser)) {
             if (!json_object_is_type(juser, json_type_object)) goto fail;
 
-            if (get_int_field_json(juser, "uid", &spec->process.user.uid, 1) < 0) goto fail;
-            if (get_int_field_json(juser, "gid", &spec->process.user.uid, 1) < 0) goto fail;
+            if (get_int_field_json(juser, "uid", (int *)&spec->process.user.uid, 1) < 0) goto fail;
+            if (get_int_field_json(juser, "gid", (int *)&spec->process.user.gid, 1) < 0) goto fail;
             if (json_object_object_get_ex(juser, "umask", NULL)) {
-                if (get_int_field_json(juser, "umask", &spec->process.user.umask, 1) < 0) goto fail;
+                if (get_int_field_json(juser, "umask", (int *)&spec->process.user.umask, 1) < 0) goto fail;
                 spec->process.user.has_umask = 1;
             }
 
