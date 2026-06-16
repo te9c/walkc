@@ -2,3 +2,9 @@ build/
 rootfs/
 .vscode/
 walkc
+mirror.sh
+tags
+ctags
+etags
+cscope.out
+
