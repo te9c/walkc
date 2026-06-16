@@ -178,7 +178,7 @@ config_spec *get_default_spec(void) {
 }
 
 char *spec_to_json(const config_spec *spec, int flags) {
-    json_object *root, *rootfs, *mounts, *proc;
+    json_object *root, *rootfs, *mounts, *proc, *proc_user;
     const char *tmp;
     char *out;
     int i, j;
@@ -247,6 +247,25 @@ char *spec_to_json(const config_spec *spec, int flags) {
             json_object_object_add(proc, "env", jenv);
         }
 
+        proc_user = json_object_new_object();
+        json_object_object_add(proc_user, "uid",
+            json_object_new_int(spec->process.user.uid));
+        json_object_object_add(proc_user, "gid",
+            json_object_new_int(spec->process.user.gid));
+        if (spec->process.user.has_umask) {
+            json_object_object_add(proc_user, "umask",
+                json_object_new_int(spec->process.user.umask));
+        }
+        if (spec->process.user.extra_gid_count) {
+            json_object *jextra_gid = json_object_new_array();
+            for (i = 0; i < spec->process.user.extra_gid_count; ++i) {
+                json_object_array_add(jextra_gid,
+                    json_object_new_int(spec->process.user.extra_gid[i]));
+            }
+            json_object_object_add(proc_user, "additionalGids", jextra_gid);
+        }
+
+        json_object_object_add(proc, "user", proc_user);
         json_object_object_add(proc, "args", jargv);
         json_object_object_add(root, "process", proc);
     }
@@ -339,7 +358,7 @@ config_spec *spec_from_json(const char *json) {
     }
 
     if (json_object_object_get_ex(root, "process", &proc)) {
-        json_object *jargs = NULL, *jenv = NULL;
+        json_object *jargs = NULL, *jenv = NULL, *juser = NULL;
         int j, argc, envc;
 
         if (!json_object_is_type(proc, json_type_object)) goto fail;
@@ -390,6 +409,35 @@ config_spec *spec_from_json(const char *json) {
                     s = json_object_get_string(env);
                     spec->process.env[j] = strdup(s);
                     if (!spec->process.env[j]) goto fail;
+                }
+            }
+        }
+        if (json_object_object_get_ex(proc, "user", &juser)) {
+            if (!json_object_is_type(juser, json_type_object)) goto fail;
+
+            if (get_int_field_json(juser, "uid", &spec->process.user.uid, 1) < 0) goto fail;
+            if (get_int_field_json(juser, "gid", &spec->process.user.uid, 1) < 0) goto fail;
+            if (json_object_object_get_ex(juser, "umask", NULL)) {
+                if (get_int_field_json(juser, "umask", &spec->process.user.umask, 1) < 0) goto fail;
+                spec->process.user.has_umask = 1;
+            }
+
+            json_object *jextra_gid = NULL;
+            if (json_object_object_get_ex(juser, "additionalGids", &jextra_gid)) {
+                if (!json_object_is_type(jextra_gid, json_type_array)) goto fail;
+
+                int gid_count = (int)json_object_array_length(jextra_gid);
+                spec->process.user.extra_gid_count = gid_count;
+                if (gid_count > 0) {
+                    spec->process.user.extra_gid = calloc((size_t)gid_count + 1, sizeof(*spec->process.user.extra_gid));
+                    if (!spec->process.user.extra_gid) goto fail;
+
+                    for (j = 0; j < gid_count; ++j) {
+                        json_object *gid = json_object_array_get_idx(jextra_gid, (size_t)j);
+
+                        if (!gid || !json_object_is_type(gid, json_type_int)) goto fail;
+                        spec->process.user.extra_gid[j] = json_object_get_int(gid);
+                    }
                 }
             }
         }

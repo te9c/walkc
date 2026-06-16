@@ -7,6 +7,8 @@
 
 #include <limits.h>
 #include <stddef.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 typedef struct mount_entry {
     char destination[PATH_MAX];
@@ -16,6 +18,15 @@ typedef struct mount_entry {
     int option_count;
 } mount_entry;
 
+typedef struct user_struct {
+    uid_t uid;
+    gid_t gid;
+    mode_t umask;
+    int has_umask;
+    gid_t *extra_gid;
+    int extra_gid_count;
+} user_struct;
+
 typedef struct process_option {
     int terminal; // if terminal is attached to the process (?)
     char cwd[PATH_MAX];
@@ -23,6 +34,7 @@ typedef struct process_option {
     int argument_count;
     char **env;
     int env_count;
+    user_struct user;
 } process_option;
 
 typedef struct config_spec {
