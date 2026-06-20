@@ -4,8 +4,11 @@
 #define _GNU_SOURCE
 #include <sys/types.h>
 #include <json-c/json.h>
+#include <linux/sched.h>
+#include <unistd.h>
 
 int sys_pivot_root(const char *new_root, const char *put_old);
+int sys_clone3(struct clone_args *cl_args, size_t size);
 
 int mkdir_if_needed(const char *path, mode_t mode);
 
