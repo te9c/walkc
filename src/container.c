@@ -182,10 +182,7 @@ char *alloc_option_string(char **options, int option_count) {
     return s;
 }
 
-static char container_stack[CONTAINER_STACK_SIZE];
-
-static int container_start(void *arg) {
-    container *cont = (container *)arg;
+static int container_start(container *cont) {
     cont->pid = getpid();
     char old_root[PATH_MAX];
 
@@ -310,18 +307,22 @@ int run_container(container *cont) {
         return 1;
     }
 
-    cont->pid = clone(
-        container_start,
-        container_stack + CONTAINER_STACK_SIZE,
-        CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWUTS | CLONE_NEWIPC | SIGCHLD,
-        cont
-    );
+    struct clone_args cl_args = {
+        .flags       = CLONE_NEWNS | CLONE_NEWPID | CLONE_NEWUTS | CLONE_NEWIPC,
+        .exit_signal = SIGCHLD
+    };
 
-    if (cont->pid == -1) {
+    cont->pid = sys_clone3(&cl_args, sizeof(cl_args));
+    if (cont->pid < 0) {
         free(state_json);
-        perror("clone");
+        perror("clone3");
         return 1;
+    } else if (cont->pid == 0) {
+        free(state_json);
+        int ret = container_start(cont);
+        exit(ret); // is exit really a good choice here?
     }
+
     if (create_file_with_content(STATE_FILENAME, state_json) < 0) {
         perror("state.json");
         free(state_json);
