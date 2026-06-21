@@ -14,6 +14,7 @@
 #include "spec.h"
 #include "config.h"
 #include "utils.h"
+#include "log.h"
 
 #define unused_arg __attribute__((unused))
 
@@ -28,30 +29,30 @@ typedef struct command {
 static int cmd_start_internal(const char *id) {
     const char *rd = runtime_dir();
     if (!rd) {
-        perror("runtime_dir");
+        log_perror("runtime_dir");
         return 1;
     }
     if (chdir(rd) < 0) {
-        perror("chdir");
+        log_perror("chdir");
         return 1;
     }
     if (chdir(id) < 0) {
-        perror("chdir");
+        log_perror("chdir");
         return 1;
     }
     char *state_json = read_all_file(STATE_FILENAME);
     if (!state_json) {
-        perror("state.json");
+        log_perror("state.json");
         return 1;
     }
     container *cont = container_from_state_json(state_json);
     free(state_json);
     if (!cont) {
-        perror("parsing of state.json");
+        log_perror("parsing of state.json");
         return 1;
     }
     if (cont->status != CONTAINER_CREATED) {
-        fprintf(stderr, "Container is not in created status.\n");
+        log_error("Container is not in created status");
         free_spec(cont->spec);
         free(cont);
         return 1;
@@ -66,11 +67,11 @@ static int cmd_start_internal(const char *id) {
 
 static int cmd_create_internal(const char *id, const char *bundle_path) {
     if (strlen(id) >= ID_MAX) {
-        fprintf(stderr, "Id is too big.\n");
+        log_error("Id is too big");
         return 1;
     }
     if (chdir(bundle_path) < 0) {
-        perror("chdir");
+        log_perror("chdir");
         return 1;
     }
     container cont;
@@ -80,18 +81,18 @@ static int cmd_create_internal(const char *id, const char *bundle_path) {
 
     char *config = read_all_file(CONFIG_FILENAME);
     if (!config) {
-        perror("config.json");
+        log_perror("config.json");
         return 1;
     }
 
     if (!realpath(bundle_path, cont.bundle)) {
-        perror("realpath");
+        log_perror("realpath");
         free(config);
         return 1;
     }
     cont.spec = spec_from_json(config);
     if (!cont.spec) {
-        perror("spec_from_json");
+        log_perror("spec_from_json");
         free(config);
         return 1;
     }
@@ -100,35 +101,35 @@ static int cmd_create_internal(const char *id, const char *bundle_path) {
 
     const char *rd = runtime_dir();
     if (!rd) {
-        perror("runtime dir");
+        log_perror("runtime dir");
         free_spec(cont.spec);
         return 1;
     }
 
     if (chdir(rd) < 0) {
-        perror("chdir");
+        log_perror("chdir");
         free_spec(cont.spec);
         return 1;
     }
     if (chdir(id) == 0) {
-        fprintf(stderr, "id already exists\n");
+        log_error("Id already exists");
         free_spec(cont.spec);
         return 1;
     }
     if (mkdir(id, 0700) < 0) {
-        perror("mkdir");
+        log_perror("mkdir");
         free_spec(cont.spec);
         return 1;
     }
     if (chdir(id) < 0) {
-        perror("chdir");
+        log_perror("chdir");
         free_spec(cont.spec);
         return 1;
     }
 
     char *container_state_json = container_to_state_json(&cont);
     if (!container_state_json) {
-        perror("container_to_state_json");
+        log_perror("container_to_state_json");
         free_spec(cont.spec);
         return 1;
     }
@@ -162,7 +163,7 @@ static int cmd_create(int argc, char **argv) {
             case 'b': {
                 int ln = strlen(optarg);
                 if (ln >= PATH_MAX) {
-                    fprintf(stderr, "bundle argument is too big.\n");
+                    log_error("Bundle argument is too big");
                     return 1;
                 }
                 strcpy(bundle_path, optarg);
@@ -173,11 +174,11 @@ static int cmd_create(int argc, char **argv) {
         }
     }
     if (optind == argc) {
-        fprintf(stderr, "Expected id.\n");
+        log_error("Expected id");
         return 1;
     }
     if (optind + 1 != argc) {
-        fprintf(stderr, "Invalid usage.\n");
+        log_error("Invalid usage");
         return 1;
     }
 
@@ -188,38 +189,38 @@ static int cmd_create(int argc, char **argv) {
 
 static int cmd_delete(int argc, char **argv) {
     if (argc != 2) {
-        fprintf(stderr, "Invalid usage.\n");
+        log_error("Invalid usage");
         return 1;
     }
 
     char *id = argv[1];
     const char *rd = runtime_dir();
     if (!rd) {
-        perror("runtime_dir\n");
+        log_perror("runtime_dir\n");
         return 1;
     }
     if (chdir(rd) < 0) {
-        perror("chdir\n");
+        log_perror("chdir\n");
         return 1;
     }
     if (chdir(id) < 0) {
-        perror("chdir");
+        log_perror("chdir");
         return 1;
     }
 
     char *state_json = read_all_file(STATE_FILENAME);
     if (!state_json) {
-        perror("read_all_file");
+        log_perror("read_all_file");
         return 1;
     }
     container *cont = container_from_state_json(state_json);
     if (!cont) {
-        perror("container_from_state_json");
+        log_perror("container_from_state_json");
         free(state_json);
         return 1;
     }
     if (cont->status != CONTAINER_CREATED && cont->status != CONTAINER_STOPPED) {
-        fprintf(stderr, "Container status should be either created or stopped\n");
+        log_error("Container status should be either created or stopped");
         free(state_json);
         free_spec(cont->spec);
         free(cont);
@@ -230,15 +231,15 @@ static int cmd_delete(int argc, char **argv) {
     free(cont);
 
     if (unlink(STATE_FILENAME) < 0) {
-        perror("unlink");
+        log_perror("unlink");
         return 1;
     }
     if (chdir(rd) < 0) {
-        perror("chdir");
+        log_perror("chdir");
         return 1;
     }
     if (rmdir(id) < 0) {
-        perror("rmdir");
+        log_perror("rmdir");
         return 1;
     }
 
@@ -262,7 +263,7 @@ static int cmd_run(int argc, char **argv) {
             case 'b': {
                 int ln = strlen(optarg);
                 if (ln >= PATH_MAX) {
-                    fprintf(stderr, "bundle argument is too big.\n");
+                    log_error("Bundle argument is too big");
                     return 1;
                 }
                 strcpy(bundle_path, optarg);
@@ -273,7 +274,7 @@ static int cmd_run(int argc, char **argv) {
         }
     }
     if (optind + 1 != argc) {
-        fprintf(stderr, "Invalid usage.\n");
+        log_error("Invalid usage");
         return 1;
     }
     char *id = argv[optind];
@@ -294,7 +295,7 @@ static int cmd_run(int argc, char **argv) {
 
 static int cmd_start(int argc, char **argv) {
     if (argc != 2) {
-        fprintf(stderr, "Invalid usage.\n");
+        log_error("Invalid usage");
         return 1;
     }
 
@@ -304,7 +305,7 @@ static int cmd_start(int argc, char **argv) {
 
 static int cmd_kill(int argc, char **argv) {
     if (argc != 2 && argc != 3) {
-        fprintf(stderr, "Invalid usage\n");
+        log_error("Invalid usage");
         return 1;
     }
     char *id = argv[1];
@@ -312,37 +313,37 @@ static int cmd_kill(int argc, char **argv) {
 
     int signo = sigstr_to_num(sig_arg);
     if (signo < 0) {
-        fprintf(stderr, "Invalid signal\n");
+        log_error("Invalid signal");
         return 1;
     }
 
     const char *rd = runtime_dir();
     if (!rd) {
-        perror("runtime_dir");
+        log_perror("runtime_dir");
         return 1;
     }
     if (chdir(rd) < 0) {
-        perror("chdir");
+        log_perror("chdir");
         return 1;
     }
     if (chdir(id) < 0) {
-        perror("chdir");
+        log_perror("chdir");
         return 1;
     }
 
     char *state_json = read_all_file(STATE_FILENAME);
     if (!state_json) {
-        perror("state.json");
+        log_perror("state.json");
         return 1;
     }
     container *cont = container_from_state_json(state_json);
     free(state_json);
     if (!cont) {
-        perror("parsing of state.json");
+        log_perror("parsing of state.json");
         return 1;
     }
     if (cont->status != CONTAINER_RUNNING) {
-        fprintf(stderr, "container should be in running state");
+        log_error("Container should be in running state");
         free_spec(cont->spec);
         free(cont);
         return 1;
@@ -352,7 +353,7 @@ static int cmd_kill(int argc, char **argv) {
     free_spec(cont->spec);
     free(cont);
     if (kill(p, signo) < 0) {
-        perror("kill");
+        log_perror("kill");
         return 1;
     }
     return 0;
@@ -382,7 +383,7 @@ static int cmd_spec(int argc, char **argv) {
             case 'b': {
                 int ln = strlen(optarg);
                 if (ln >= PATH_MAX) {
-                    fprintf(stderr, "bundle argument is too big.\n");
+                    log_error("bundle argument is too big");
                     return 1;
                 }
                 strcpy(bundle_path, optarg);
@@ -397,26 +398,26 @@ static int cmd_spec(int argc, char **argv) {
         }
     }
     if (optind < argc) {
-        fprintf(stderr, "Invalid usage.\n");
+        log_error("Invalid usage");
         return 1;
     }
     if (chdir(bundle_path) < 0) {
-        perror("chdir");
+        log_perror("chdir");
         return 1;
     }
     if (!forced && access(CONFIG_FILENAME, F_OK) == 0) {
-        fprintf(stderr, "config.json already exists\n");
+        log_error("config.json already exists");
         return 1;
     }
     config_spec *spec = get_default_spec();
     if (!spec) {
-        perror("default_spec");
+        log_perror("default_spec");
         return 1;
     }
     char *json_spec = spec_to_json(spec, JSON_TO_STRING_DEFAULT_FLAGS);
     free_spec(spec);
     if (create_file_with_content(CONFIG_FILENAME, json_spec) < 0) {
-        perror("config.json");
+        log_perror("config.json");
         return 1;
     }
     free(json_spec);
@@ -425,21 +426,21 @@ static int cmd_spec(int argc, char **argv) {
 
 static int cmd_state(int argc, char **argv) {
     if (argc != 2) {
-        fprintf(stderr, "invalid usage\n");
+        log_error("invalid usage");
         return 1;
     }
     char *id = argv[1];
     const char *rd = runtime_dir();
     if (!rd) {
-        perror("runtime_dir");
+        log_perror("runtime_dir");
         return 1;
     }
     if (chdir(rd) < 0) {
-        perror("chdir");
+        log_perror("chdir");
         return 1;
     }
     if (chdir(id) < 0) {
-        perror("chdir");
+        log_perror("chdir");
         return 1;
     }
     char *state_json = read_all_file(STATE_FILENAME);
@@ -504,7 +505,7 @@ int main(int argc, char *argv[]) {
     char *name = basename(argv[0]);
     if (set_program_name(name) < 0) {
         if (set_program_name(FALLBACK_PROGRAM_NAME) < 0) {
-            perror("set_program_name");
+            log_perror("set_program_name");
             return 1;
         }
     }
@@ -533,13 +534,13 @@ int main(int argc, char *argv[]) {
         }
     }
     if (global_argc == argc) {
-        fprintf(stderr, "Invalid usage.\n");
+        log_error("Invalid usage");
         return 1;
     }
 
     const command *cmd = find_command(argv[1]);
     if (!cmd) {
-        fprintf(stderr, "Invalid command.\n");
+        log_error("Invalid command");
         return 1;
     }
     optind = 1;

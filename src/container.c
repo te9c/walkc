@@ -2,6 +2,7 @@
 #include "container.h"
 #include "utils.h"
 #include "config.h"
+#include "log.h"
 
 #include <errno.h>
 #include <limits.h>
@@ -187,49 +188,49 @@ static int container_start(container *cont) {
     char old_root[PATH_MAX];
 
     if (mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL) == -1) {
-        perror("mount MS_PRIVATE");
+        log_perror("mount MS_PRIVATE");
         return 1;
     }
 
     if (mount(cont->spec->rootfs_path, cont->spec->rootfs_path, NULL,
         MS_BIND | MS_REC, NULL) == -1) {
-        perror("bind-mount rootfs");
+        log_perror("bind-mount rootfs");
         return 1;
     }
 
     if (snprintf(old_root, sizeof(old_root), "%s/.old_root", cont->spec->rootfs_path) >= (int)sizeof(old_root)) {
-        fprintf(stderr, "rootfs path too long\n");
+        log_error("rootfs path too long");
         return 1;
     }
 
     if (mkdir_if_needed(old_root, 0755) == -1) {
-        perror("mkdir .old_root");
+        log_perror("mkdir .old_root");
         return 1;
     }
 
     if (sys_pivot_root(cont->spec->rootfs_path, old_root) == -1) {
-        perror("pivot_root");
+        log_perror("pivot_root");
         return 1;
     }
 
     if (chdir("/") == -1) {
-        perror("chdir");
+        log_perror("chdir");
         return 1;
     }
 
     if (umount2("/.old_root", MNT_DETACH) == -1) {
-        perror("umount old root");
+        log_perror("umount old root");
         return 1;
     }
 
     if (rmdir("/.old_root") == -1) {
-        perror("rmdir old root");
+        log_perror("rmdir old root");
         return 1;
     }
 
     for (int i = 0; i < cont->spec->mount_count; ++i) {
         if (mkdir_if_needed(cont->spec->mounts[i].destination, 0555) < 0) {
-            perror("mkdir_if_needed");
+            log_perror("mkdir_if_needed");
             return 1;
         }
         char *data = alloc_option_string(cont->spec->mounts[i].options, cont->spec->mounts[i].option_count);
@@ -241,7 +242,7 @@ static int container_start(container *cont) {
                 cont->spec->mounts[i].destination,
                 cont->spec->mounts[i].type,
                 flags, data) < 0) {
-            perror("mount");
+            log_perror("mount");
             free(data);
             return 1;
         }
@@ -249,19 +250,19 @@ static int container_start(container *cont) {
     }
 
     if (chdir(cont->spec->process.cwd) < 0) {
-        perror("chdir");
+        log_perror("chdir");
         return 1;
     }
 
     if (cont->spec->rootfs_readonly) {
         if (mount(NULL, "/", NULL, MS_RDONLY | MS_REMOUNT | MS_BIND, NULL) < 0) {
-            perror("mount RDONLY");
+            log_perror("mount RDONLY");
             return 1;
         }
     }
 
     if (sethostname(cont->spec->hostname, strlen(cont->spec->hostname)) < 0) {
-        perror("sethostname");
+        log_perror("sethostname");
         return 1;
     }
 
@@ -278,7 +279,7 @@ static int container_start(container *cont) {
     }
 
     execvpe(argv[0], argv, envp);
-    perror("execvp");
+    log_perror("execvp");
     return 1;
 }
 
@@ -289,21 +290,21 @@ int run_container(container *cont) {
 
     const char *rd = runtime_dir();
     if (!rd) {
-        perror("runtime_dir");
+        log_perror("runtime_dir");
         return 1;
     }
     if (chdir(rd) < 0) {
-        perror("chdir");
+        log_perror("chdir");
         return 1;
     }
     if (chdir(cont->id) < 0) {
-        perror("chdir");
+        log_perror("chdir");
         return 1;
     }
     cont->status = CONTAINER_RUNNING;
     char *state_json = container_to_state_json(cont);
     if (!state_json) {
-        perror("container_to_state_json");
+        log_perror("container_to_state_json");
         return 1;
     }
 
@@ -315,7 +316,7 @@ int run_container(container *cont) {
     cont->pid = sys_clone3(&cl_args, sizeof(cl_args));
     if (cont->pid < 0) {
         free(state_json);
-        perror("clone3");
+        log_perror("clone3");
         return 1;
     } else if (cont->pid == 0) {
         free(state_json);
@@ -324,7 +325,7 @@ int run_container(container *cont) {
     }
 
     if (create_file_with_content(STATE_FILENAME, state_json) < 0) {
-        perror("state.json");
+        log_perror("state.json");
         free(state_json);
         return 1;
     }
@@ -333,7 +334,7 @@ int run_container(container *cont) {
 
     int status;
     if (waitpid(cont->pid, &status, 0) == -1) {
-        perror("waitpid");
+        log_perror("waitpid");
         return 1;
     }
 
@@ -342,11 +343,11 @@ int run_container(container *cont) {
 
     state_json = container_to_state_json(cont);
     if (!state_json) {
-        perror("container_to_state_json");
+        log_perror("container_to_state_json");
         return 1;
     }
     if (create_file_with_content(STATE_FILENAME, state_json) < 0) {
-        perror("state.json");
+        log_perror("state.json");
         free(state_json);
         return 1;
     }
@@ -357,7 +358,7 @@ int run_container(container *cont) {
     }
 
     if (WIFSIGNALED(status)) {
-        fprintf(stderr, "container killed by signal %d\n", WTERMSIG(status));
+        log_errorf("container killed by signal %d", WTERMSIG(status));
     }
 
     return 1;

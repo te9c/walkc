@@ -23,4 +23,9 @@
 // Spaces between the first and the second columns.
 #define CMD_HELP_SPACES_MIDDLE 2
 
+#define PROGRAM_NAME_MAX_LEN 64
+#define FALLBACK_PROGRAM_NAME "walkc"
+
+#define DEFAULT_VERBOSITY_LEVEL 1
+
 #endif
