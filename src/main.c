@@ -14,7 +14,7 @@
 #include "config.h"
 #include "utils.h"
 
-#define unused_attr __attribute__((unused))
+#define unused_arg __attribute__((unused))
 
 typedef int (*cmd_fn)(int argc, char **argv);
 
@@ -146,7 +146,12 @@ static int cmd_create(int argc, char **argv) {
     // options:
     // --bundle: path to bundle (default is current directory)
     static struct option long_options[] = {
-        {"bundle", required_argument, 0, 'b'},
+        {
+            .name = "bundle",
+            .has_arg = required_argument,
+            .flag = NULL,
+            .val = 'b'
+        },
         {0,0,0,0}
     };
     char bundle_path[PATH_MAX] = DEFAULT_BUNDLE_PATH;
@@ -179,7 +184,8 @@ static int cmd_create(int argc, char **argv) {
 
     return cmd_create_internal(id, bundle_path);
 }
-static int cmd_delete(int argc unused_attr, char **argv unused_attr) {
+
+static int cmd_delete(int argc, char **argv) {
     if (argc != 2) {
         fprintf(stderr, "Invalid usage.\n");
         return 1;
@@ -238,9 +244,14 @@ static int cmd_delete(int argc unused_attr, char **argv unused_attr) {
     return 0;
 }
 
-static int cmd_run(int argc unused_attr, char **argv unused_attr) {
+static int cmd_run(int argc, char **argv) {
     static struct option long_options[] = {
-        {"bundle", required_argument, 0, 'b'},
+        {
+            .name = "bundle",
+            .has_arg = required_argument,
+            .flag = NULL,
+            .val = 'b'
+        },
         {0,0,0,0}
     };
     char bundle_path[PATH_MAX] = DEFAULT_BUNDLE_PATH;
@@ -280,7 +291,7 @@ static int cmd_run(int argc unused_attr, char **argv unused_attr) {
     return 0;
 }
 
-static int cmd_start(int argc unused_attr, char **argv unused_attr) {
+static int cmd_start(int argc, char **argv) {
     if (argc != 2) {
         fprintf(stderr, "Invalid usage.\n");
         return 1;
@@ -290,7 +301,7 @@ static int cmd_start(int argc unused_attr, char **argv unused_attr) {
     return cmd_start_internal(id);
 }
 
-static int cmd_kill(int argc unused_attr, char **argv unused_attr) {
+static int cmd_kill(int argc, char **argv) {
     if (argc != 2 && argc != 3) {
         fprintf(stderr, "Invalid usage\n");
         return 1;
@@ -440,6 +451,7 @@ static int cmd_state(int argc, char **argv) {
 static int cmd_help(int argc, char **argv);
 
 static const command commands[] = {
+  /*{ <name>,      <run_cmd>,     <summary>           }*/
     { "create",    cmd_create,    "create container" },
     { "delete",    cmd_delete,    "delete container" },
     { "run",       cmd_run,       "create and run container" },
@@ -452,9 +464,7 @@ static const command commands[] = {
 
 static const int command_count = sizeof(commands) / sizeof(command);
 
-#define SPACES_PREFIX 2
-#define SPACES_MIDDLE 2
-static int cmd_help(int argc unused_attr, char **argv unused_attr) {
+static int cmd_help(int argc unused_arg, char **argv unused_arg) {
     int longest_command = 0;
     for (int i = 0; i < command_count; ++i) {
         if ((int)strlen(commands[i].name) > longest_command) {
@@ -465,11 +475,11 @@ static int cmd_help(int argc unused_attr, char **argv unused_attr) {
     printf("walkc - educational container runtime.\n");
     printf("COMMANDS:\n");
     for (int i = 0; i < command_count; ++i) {
-        for (int j = 0; j < SPACES_PREFIX; ++j)
+        for (int j = 0; j < CMD_HELP_SPACES_PREFIX; ++j)
             putchar(' ');
         printf("%s", commands[i].name);
         int len = strlen(commands[i].name);
-        int spaces_needed = longest_command - len + SPACES_MIDDLE;
+        int spaces_needed = longest_command - len + CMD_HELP_SPACES_MIDDLE;
         for (int j = 0; j < spaces_needed; ++j) {
             putchar(' ');
         }

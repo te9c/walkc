@@ -17,4 +17,10 @@
 #define ID_MAX 128
 #define JSON_TO_STRING_DEFAULT_FLAGS (JSON_C_TO_STRING_PRETTY | JSON_C_TO_STRING_NOSLASHESCAPE)
 
+// Help is a table with two columns: command and summary.
+// Spaces before first column
+#define CMD_HELP_SPACES_PREFIX 2
+// Spaces between the first and the second columns.
+#define CMD_HELP_SPACES_MIDDLE 2
+
 #endif
