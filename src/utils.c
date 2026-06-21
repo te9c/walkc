@@ -15,6 +15,9 @@
 char _runtime_dir[PATH_MAX];
 int _runtime_dir_set = 0;
 
+char _program_name[PROGRAM_NAME_MAX_LEN];
+int _program_name_set = 0;
+
 int sys_pivot_root(const char *new_root, const char *put_old) {
     return syscall(SYS_pivot_root, new_root, put_old);
 }
@@ -69,6 +72,28 @@ create_runtime_dir:
     }
     _runtime_dir_set = 1;
     return _runtime_dir;
+}
+
+const char *get_program_name(void) {
+    if (_program_name_set)
+        return _program_name;
+    return NULL;
+}
+
+int set_program_name(const char *s) {
+    if (!s) {
+        errno = EINVAL;
+        return -1;
+    }
+    int len = strlen(s);
+    if (len + 1 > PROGRAM_NAME_MAX_LEN) {
+        errno = ENAMETOOLONG;
+        return -1;
+    }
+
+    strcpy(_program_name, s);
+    _program_name_set = 1;
+    return 0;
 }
 
 char *read_all_file(const char *path)

@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <signal.h>
+#include <libgen.h>
 
 #include "container.h"
 #include "spec.h"
@@ -472,7 +473,7 @@ static int cmd_help(int argc unused_arg, char **argv unused_arg) {
         }
     }
     
-    printf("walkc - educational container runtime.\n");
+    printf("%s - educational container runtime.\n", get_program_name());
     printf("COMMANDS:\n");
     for (int i = 0; i < command_count; ++i) {
         for (int j = 0; j < CMD_HELP_SPACES_PREFIX; ++j)
@@ -498,7 +499,16 @@ const command *find_command(const char *name) {
 }
 
 int main(int argc, char *argv[]) {
-    // TODO: global options (-v)
+    if (argc == 0) return 1;
+
+    char *name = basename(argv[0]);
+    if (set_program_name(name) < 0) {
+        if (set_program_name(FALLBACK_PROGRAM_NAME) < 0) {
+            perror("set_program_name");
+            return 1;
+        }
+    }
+
     if (argc < 2) {
         cmd_help(argc, argv);
         return 1;

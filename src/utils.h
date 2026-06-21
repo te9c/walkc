@@ -13,6 +13,8 @@ int sys_clone3(struct clone_args *cl_args, size_t size);
 int mkdir_if_needed(const char *path, mode_t mode);
 
 const char *runtime_dir(void);
+const char *get_program_name(void);
+int set_program_name(const char *s);
 
 char *read_all_file(const char *path);
 int create_file_with_content(const char *path, const char *content);
