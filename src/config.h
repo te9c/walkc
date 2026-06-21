@@ -2,6 +2,7 @@
 #define CONFIG_H
 
 #include <json-c/json.h>
+#include "log.h"
 
 #define OCI_VERSION "1.0.0"
 #define DEFAULT_BUNDLE_PATH "."
@@ -26,6 +27,6 @@
 #define PROGRAM_NAME_MAX_LEN 64
 #define FALLBACK_PROGRAM_NAME "walkc"
 
-#define DEFAULT_VERBOSITY_LEVEL 1
+#define DEFAULT_VERBOSITY_LEVEL VERBOSITY_ERROR
 
 #endif

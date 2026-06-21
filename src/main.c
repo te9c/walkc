@@ -18,6 +18,19 @@
 
 #define unused_arg __attribute__((unused))
 
+#define HANDLE_GETOPT_ERRORS(argv)                                            \
+    case '?': {                                                                \
+        if (optopt)                                                            \
+            log_errorf("Unknown option: -%c", optopt);                        \
+        else                                                                   \
+            log_errorf("Unknown option: %s", (argv)[optind - 1]);             \
+        return 1;                                                              \
+    }                                                                          \
+    case ':': {                                                                \
+        log_errorf("Option -%c requires an argument", optopt);             \
+        return 1;                                                              \
+    }
+
 typedef int (*cmd_fn)(int argc, char **argv);
 
 typedef struct command {
@@ -158,7 +171,7 @@ static int cmd_create(int argc, char **argv) {
     };
     char bundle_path[PATH_MAX] = DEFAULT_BUNDLE_PATH;
     int c;
-    while ((c = getopt_long(argc, argv, "b:", long_options, NULL)) != -1) {
+    while ((c = getopt_long(argc, argv, ":b:", long_options, NULL)) != -1) {
         switch (c) {
             case 'b': {
                 int ln = strlen(optarg);
@@ -169,8 +182,7 @@ static int cmd_create(int argc, char **argv) {
                 strcpy(bundle_path, optarg);
                 break;
             }
-            case '?':
-                return 1;
+            HANDLE_GETOPT_ERRORS(argv)
         }
     }
     if (optind == argc) {
@@ -269,8 +281,7 @@ static int cmd_run(int argc, char **argv) {
                 strcpy(bundle_path, optarg);
                 break;
             }
-            case '?':
-                return 1;
+            HANDLE_GETOPT_ERRORS(argv)
         }
     }
     if (optind + 1 != argc) {
@@ -378,12 +389,12 @@ static int cmd_spec(int argc, char **argv) {
     char bundle_path[PATH_MAX] = DEFAULT_BUNDLE_PATH;
     int c;
     int forced = 0;
-    while ((c = getopt_long(argc, argv, "b:", long_options, NULL)) != -1) {
+    while ((c = getopt_long(argc, argv, "b:f", long_options, NULL)) != -1) {
         switch (c) {
             case 'b': {
                 int ln = strlen(optarg);
                 if (ln >= PATH_MAX) {
-                    log_error("bundle argument is too big");
+                    log_error("Bundle argument is too big");
                     return 1;
                 }
                 strcpy(bundle_path, optarg);
@@ -393,8 +404,7 @@ static int cmd_spec(int argc, char **argv) {
                 forced = 1;
                 break;
             }
-            case '?':
-                return 1;
+            HANDLE_GETOPT_ERRORS(argv)
         }
     }
     if (optind < argc) {
@@ -525,12 +535,33 @@ int main(int argc, char *argv[]) {
 
     int c;
     static struct option long_options[] = {
+        {
+            .name = "verbose",
+            .has_arg = no_argument,
+            .flag = NULL,
+            .val = 'v'
+        },
+        {
+            .name = "quiet",
+            .has_arg = no_argument,
+            .flag = NULL,
+            .val = 'q'
+        },
         {0,0,0,0}
     };
-    while ((c = getopt_long(global_argc, argv, "", long_options, NULL)) != -1) {
+
+    opterr = 0;
+    while ((c = getopt_long(global_argc, argv, "vq", long_options, NULL)) != -1) {
         switch (c) {
-            case '?':
-                return 1;
+            case 'v': {
+                set_verbosity_level(VERBOSITY_DEBUG);
+                break;
+            }
+            case 'q': {
+                set_verbosity_level(VERBOSITY_QUIET);
+                break;
+            }
+            HANDLE_GETOPT_ERRORS(argv)
         }
     }
     if (global_argc == argc) {
@@ -538,7 +569,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    const command *cmd = find_command(argv[1]);
+    const command *cmd = find_command(argv[global_argc]);
     if (!cmd) {
         log_error("Invalid command");
         return 1;
