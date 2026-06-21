@@ -289,6 +289,7 @@ static int cmd_start(int argc unused_attr, char **argv unused_attr) {
     char *id = argv[1];
     return cmd_start_internal(id);
 }
+
 static int cmd_kill(int argc unused_attr, char **argv unused_attr) {
     if (argc != 2 && argc != 3) {
         fprintf(stderr, "Invalid usage\n");
@@ -344,13 +345,26 @@ static int cmd_kill(int argc unused_attr, char **argv unused_attr) {
     }
     return 0;
 }
+
 static int cmd_spec(int argc, char **argv) {
     static struct option long_options[] = {
-        {"bundle", required_argument, 0, 'b'},
+        {
+            .name    = "bundle",            // name of the long option
+            .has_arg = required_argument,   // does it require argument?
+            .flag    = NULL,                // if null returns val otherwise return 0
+            .val     = 'b'                  // what to return if option is found
+        },
+        {
+            .name = "force",
+            .has_arg = no_argument,
+            .flag = NULL,
+            .val = 'f'
+        },
         {0,0,0,0}
     };
     char bundle_path[PATH_MAX] = DEFAULT_BUNDLE_PATH;
     int c;
+    int forced = 0;
     while ((c = getopt_long(argc, argv, "b:", long_options, NULL)) != -1) {
         switch (c) {
             case 'b': {
@@ -360,6 +374,10 @@ static int cmd_spec(int argc, char **argv) {
                     return 1;
                 }
                 strcpy(bundle_path, optarg);
+                break;
+            }
+            case 'f': {
+                forced = 1;
                 break;
             }
             case '?':
@@ -374,7 +392,7 @@ static int cmd_spec(int argc, char **argv) {
         perror("chdir");
         return 1;
     }
-    if (access(CONFIG_FILENAME, F_OK) == 0) {
+    if (!forced && access(CONFIG_FILENAME, F_OK) == 0) {
         fprintf(stderr, "config.json already exists\n");
         return 1;
     }
@@ -392,6 +410,7 @@ static int cmd_spec(int argc, char **argv) {
     free(json_spec);
     return 0;
 }
+
 static int cmd_state(int argc, char **argv) {
     if (argc != 2) {
         fprintf(stderr, "invalid usage\n");
@@ -417,6 +436,7 @@ static int cmd_state(int argc, char **argv) {
     
     return 0;
 }
+
 static int cmd_help(int argc, char **argv);
 
 static const command commands[] = {
