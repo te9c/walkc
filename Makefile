@@ -44,6 +44,7 @@ tags:
 	ctags -R $(SRC_DIR)
 
 clean:
-	rm -rf $(BUILD_DIR) $(TARGET)
+	$(RM) $(OBJS) $(TARGET)
+	-rmdir $(BUILD_DIR)
 
 .PHONY: all clean run sanitize run-sanitize tags
