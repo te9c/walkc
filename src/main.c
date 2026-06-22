@@ -18,16 +18,16 @@
 
 #define unused_arg __attribute__((unused))
 
-#define HANDLE_GETOPT_ERRORS(argv)                                            \
+#define HANDLE_GETOPT_ERRORS(argv)                                             \
     case '?': {                                                                \
         if (optopt)                                                            \
-            log_errorf("Unknown option: -%c", optopt);                        \
+            log_errorf("Unknown option: -%c", optopt);                         \
         else                                                                   \
-            log_errorf("Unknown option: %s", (argv)[optind - 1]);             \
+            log_errorf("Unknown option: %s", (argv)[optind - 1]);              \
         return 1;                                                              \
     }                                                                          \
     case ':': {                                                                \
-        log_errorf("Option -%c requires an argument", optopt);             \
+        log_errorf("Option -%c requires an argument", optopt);                 \
         return 1;                                                              \
     }
 
