@@ -31,8 +31,14 @@ sanitize: clean $(TARGET)
 run: $(TARGET)
 	./$(TARGET) $(ARGS)
 
+sudo-run: $(TARGET)
+	sudo ./$(TARGET) $(ARGS)
+
 run-sanitize: sanitize
 	ASAN_OPTIONS=detect_leaks=1:abort_on_error=1 UBSAN_OPTIONS=print_stacktrace=1 ./$(TARGET) $(ARGS)
+
+sudo-run-sanitize: sanitize
+	sudo ASAN_OPTIONS=detect_leaks=1:abort_on_error=1 UBSAN_OPTIONS=print_stacktrace=1 ./$(TARGET) $(ARGS)
 
 tags:
 	ctags -R $(SRC_DIR)
