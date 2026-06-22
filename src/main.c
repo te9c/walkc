@@ -515,7 +515,10 @@ int main(int argc, char *argv[]) {
     char *name = basename(argv[0]);
     if (set_program_name(name) < 0) {
         if (set_program_name(FALLBACK_PROGRAM_NAME) < 0) {
-            log_perror("set_program_name");
+            // Can't use log_perror here because it uses
+            // the program name which hasn't been set 
+            // due to failure
+            perror("set_program_name");
             return 1;
         }
     }
