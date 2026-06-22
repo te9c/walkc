@@ -167,7 +167,7 @@ static int cmd_create(int argc, char **argv) {
             .flag = NULL,
             .val = 'b'
         },
-        {0,0,0,0}
+        {NULL, 0, NULL, 0}
     };
     char bundle_path[PATH_MAX] = DEFAULT_BUNDLE_PATH;
     int c;
@@ -266,7 +266,7 @@ static int cmd_run(int argc, char **argv) {
             .flag = NULL,
             .val = 'b'
         },
-        {0,0,0,0}
+        {NULL, 0, NULL, 0}
     };
     char bundle_path[PATH_MAX] = DEFAULT_BUNDLE_PATH;
     int c;
@@ -384,7 +384,7 @@ static int cmd_spec(int argc, char **argv) {
             .flag = NULL,
             .val = 'f'
         },
-        {0,0,0,0}
+        {NULL, 0, NULL, 0}
     };
     char bundle_path[PATH_MAX] = DEFAULT_BUNDLE_PATH;
     int c;
@@ -547,7 +547,7 @@ int main(int argc, char *argv[]) {
             .flag = NULL,
             .val = 'q'
         },
-        {0,0,0,0}
+        {NULL, 0, NULL, 0}
     };
 
     opterr = 0;
